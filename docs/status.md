@@ -17,15 +17,19 @@ Atualizado: 2026-11-16
 - Repositório público: https://github.com/Tarcitani/coconut-call (publicação autorizada pelo usuário).
 - **Servidor de sinalização** (`src/Coconut.Signaling.Server`, ASP.NET Core): WebSocket `/ws`, um ator por sala sobre o núcleo, convites de 50 bits, tokens de retomada guardados como hash, limites de tamanho/taxa/handshake/salas por origem, TLS obrigatório fora do loopback. **64/64 testes de integração** (estáveis em 5 repetições), incluindo sanitização de logs. Processo real verificado em loopback (`/healthz` 200) e recusando HTTP em `0.0.0.0`.
 
+- **Cliente e malha P2P** (`src/Coconut.Media.Native`, `src/Coconut.Client`): interop de produção (`RtcPeer` com registro de IDs seguro contra callbacks tardios; TURN recusado por construção), Opus, RTP, cliente de sinalização e `MeshSession` (segue o servidor, trickle ICE, verificação por eco, renegociação de enlaces que caem antes de verificados, áudio codificado uma vez e enviado a todos). **P2 — sucesso local**: N=2…15; com 15 processos entrando juntos, 40/40 execuções com 105 enlaces e áudio íntegro entre todos. [Evidência](benchmarks/2026-11-16-P2-malha-local.md).
+
 ## Validação pendente
 - P1 entre redes distintas (NAT/CGNAT, IPv6) — depende de ambiente externo.
 - Perfil SRTP efetivamente negociado após habilitar AES-GCM (não observado no log).
 - Servidor com WSS e certificado real (hospedagem pública futura).
+- Causa da queda rara de ICE antes do trickle (1 em ~4.200 enlaces, recuperada por renegociação) — ver P2.
+- `Coconut.Client` sem testes unitários próprios (coberto só pelo P2); quedas de enlaces já verificados não tratadas.
 
 ## O app ainda não é utilizável
 Falta o caminho até a primeira chamada de voz real. Ordem planejada:
-1. `Coconut.Media.Native` (bindings extraídos do P1) + cliente de sinalização + gerenciador da malha P2P (aplica `connectToPeer`/`relay`/`reportLink`); P2 com N processos locais.
-2. Áudio real: captura e reprodução WASAPI (P3 decide AEC), Opus, jitter buffer, mudo efetivo na mídia.
+1. ~~Interop + cliente de sinalização + malha P2P; P2~~ — concluído localmente.
+2. **Próximo:** áudio real: captura e reprodução WASAPI (P3 decide AEC), Opus, jitter buffer, mudo efetivo na mídia.
 3. App WinUI 3 mínimo: criar/entrar por código, lista de participantes, mudo, sair.
 4. Depois: tela (P4), bandeja/protocolo/instância única (P5), instalador/atualizador (P7).
 

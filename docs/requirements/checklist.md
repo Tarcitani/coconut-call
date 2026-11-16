@@ -10,10 +10,10 @@ Fonte dos requisitos: prompt mestre do produto (contrato §1–§7). Evidências
 | PLT-2 | GPLv3 no código próprio; licenças de dependências verificadas | implementado | `LICENSE`; SIPSorcery rejeitada por licença ([ADR 0002](../adr/0002-pilha-webrtc.md)) |
 | NET-1 | Mídia somente P2P; sem SFU/TURN/relay | validado-local | [P1](../benchmarks/2026-11-16-P1-webrtc-local.md): sem servidores ICE, par host↔host, DTLS-SRTP; entre redes distintas pendente |
 | NET-2 | Sinalização com transporte seguro e autenticação de sessão | testado-integração | `Coconut.Signaling.Server.Tests` (64): handshake, tokens de retomada, revogação, limites, TLS fora do loopback; processo real em loopback verificado. WSS com certificado real e hospedagem pública pendentes |
-| NET-3 | Até 15 participantes em malha completa | testado-unidade | `Full_mesh_of_fifteen_is_admitted`, `Capacity_counts_pending_participants`; rede real pendente (P2/P6) |
+| NET-3 | Até 15 participantes em malha completa | validado-local | [P2](../benchmarks/2026-11-16-P2-malha-local.md): 15 processos, 105 enlaces, áudio entre todos, 40/40; redes distintas e uplink com tela pendentes |
 | NET-4 | Falhas de conexão compreensíveis; condições de rede documentadas | projetado | `AdmissionFailed` com pares afetados; auditoria §5 |
 | ADM-1 | Estado provisório, confirmação coordenada, timeout e rollback | testado-unidade | `AdmissionTests` (bilateral, timeout, falha, rollback preserva chamada) |
-| ADM-2 | Entradas simultâneas, saídas e reconexões durante a negociação | testado-unidade | `Concurrent_joiners_*`, `Active_participant_leaving_*`, `Reconnecting_participant_is_still_required_*`, `ReviewRegressionTests`, `RoomInvariantTests` (300 sequências) |
+| ADM-2 | Entradas simultâneas, saídas e reconexões durante a negociação | testado-unidade; entradas simultâneas validadas localmente (P2) | `Concurrent_joiners_*`, `Active_participant_leaving_*`, `Reconnecting_participant_is_still_required_*`, `ReviewRegressionTests`, `RoomInvariantTests` (300 sequências) |
 | ADM-3 | Sinalização × P2P × mídia operacional diferenciados | projetado | [Protocolo §2](../protocol/salas-e-admissao.md) |
 | ROOM-1 | Salas e nomes temporários, sem contas | testado-unidade | Identidade = `ParticipantId` efêmero |
 | ROOM-2 | Encerramento automático da sala vazia com tolerância de reconexão | testado-unidade | `Empty_room_closes_only_after_reconnect_grace` |

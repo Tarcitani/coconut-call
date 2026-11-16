@@ -1,8 +1,11 @@
 <Solution>
   <Folder Name="/prototypes/">
     <Project Path="prototypes/P1.WebRtcLoopback/P1.WebRtcLoopback.csproj" />
+    <Project Path="prototypes/P2.MeshLocal/P2.MeshLocal.csproj" />
   </Folder>
   <Folder Name="/src/">
+    <Project Path="src/Coconut.Client/Coconut.Client.csproj" />
+    <Project Path="src/Coconut.Media.Native/Coconut.Media.Native.csproj" />
     <Project Path="src/Coconut.Signaling.Contracts/Coconut.Signaling.Contracts.csproj" />
     <Project Path="src/Coconut.Signaling.Core/Coconut.Signaling.Core.csproj" />
     <Project Path="src/Coconut.Signaling.Server/Coconut.Signaling.Server.csproj" />

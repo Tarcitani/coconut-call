@@ -48,6 +48,12 @@ Falha e *rollback*:
 
 Capacidade: `Pending + Active + Reconnecting ≤ 15`. Excedente recebe `RoomFull`.
 
+**Comportamento do cliente** (`Coconut.Client.MeshSession`, validado no [P2](../benchmarks/2026-11-16-P2-malha-local.md)):
+- Cada enlace tem um canal de dados e uma trilha Opus `sendrecv` (`mid=audio`), criada nos dois lados antes de qualquer descrição.
+- Verificação (nível 2): ao abrir o canal, cada lado envia `probe:<nonce>`; ao receber o eco `probe-ack:<nonce>` reporta `Verified`.
+- SDP e candidatos via `relay` com trickle; candidato do relay = `"<mid>\n<candidato>"`. Candidatos que chegam antes da descrição remota ficam retidos; cada um é aplicado de forma independente.
+- Enlace que cai antes de verificado: o ofertante renegocia com uma conexão nova (até 3 tentativas) e só então reporta `Failed`; o respondente substitui a conexão ao receber nova oferta. Quedas de enlaces já verificados ainda não são tratadas (§8).
+
 ## 4. Saída, desconexão e reconexão
 
 - **Saída voluntária** (`Leave`): remoção imediata, `PeerLeft(Left)`. Voltar exige novo convite e gera nova identidade (perde antiguidade); o núcleo rejeita a reutilização de uma identidade já usada na sala (`IdentityReused`).
