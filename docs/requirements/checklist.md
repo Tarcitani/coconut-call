@@ -21,9 +21,9 @@ Fonte dos requisitos: prompt mestre do produto (contrato §1–§7). Evidências
 | ROOM-4 | Sucessão automática por antiguidade | testado-unidade | `Admin_succession_*`, `Seniority_survives_reconnection` |
 | ROOM-5 | Saída voluntária × desconexão temporária | testado-unidade | `Voluntary_leave_*`, `Reconnect_grace_expiry_*` |
 | ROOM-6 | Entrada por código e `coconut://join/CODIGO`; instância existente recebe convite | pendente | P5 |
-| AUD-1 | Microfone aberto com mudo efetivo validado na mídia | pendente | Validação por inspeção do RTP |
-| AUD-2 | Opus, eco tratado, processamento mínimo | pendente | P3 |
-| AUD-3 | Dispositivos padrão, seleção manual, troca a quente, recuperação | pendente | |
+| AUD-1 | Microfone aberto com mudo efetivo validado na mídia | testado-unidade; validado-local (mudo) | `VoicePipelineTests`: mudo verificado no áudio decodificado, provado por mutação; P3: motor real com mudo = 0 pacotes. Chamada entre pessoas pendente |
+| AUD-2 | Opus, eco tratado, processamento mínimo | validado-local (parcial) | [ADR 0004](../adr/0004-audio-wasapi.md), [P3](../benchmarks/2026-11-16-P3-audio-local.md): AEC do Windows ativo, IA desligada; NS simples e AGC impostos pelo modo (decisão pendente); eco audível não avaliado |
+| AUD-3 | Dispositivos padrão, seleção manual, troca a quente, recuperação | implementado | `AudioDeviceCatalog` (notificações), `VoiceEngine` (seleção, troca, volta ao padrão); abertura real verificada no P3; desconexão física não testada |
 | SCR-1 | Monitor inteiro, seleção multi-monitor | pendente | P4; máquina local tem 1 monitor |
 | SCR-2 | Resolução/FPS/bitrate configuráveis e adaptativos | pendente | P4/P6 |
 | SCR-3 | Um transmissor por sala; troca solicitar/aceitar/recusar/expirar/cancelar | testado-unidade | `ScreenShareTests` (15 casos) |

@@ -12,6 +12,13 @@
     <PackageLicenseExpression>GPL-3.0-or-later</PackageLicenseExpression>
   </PropertyGroup>
 
+  <!-- Lado cliente é exclusivo do Windows 11 (WASAPI, WinUI). Sinalização permanece multiplataforma (hospedagem futura). -->
+  <ItemGroup Condition="!$(MSBuildProjectName.StartsWith('Coconut.Signaling'))">
+    <AssemblyAttribute Include="System.Runtime.Versioning.SupportedOSPlatformAttribute">
+      <_Parameter1>windows10.0.22000</_Parameter1>
+    </AssemblyAttribute>
+  </ItemGroup>
+
   <PropertyGroup Condition="$(MSBuildProjectName.EndsWith('.Tests'))">
     <IsPackable>false</IsPackable>
     <!-- Nomes de teste descritivos com sublinhados são intencionais. -->

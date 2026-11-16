@@ -81,6 +81,16 @@ public sealed unsafe class OpusDecoder : IDisposable
         }
     }
 
+    /// <summary>Ocultação de perda (PLC): sintetiza <paramref name="pcm"/>.Length amostras a partir do estado anterior.</summary>
+    public int DecodeLost(Span<short> pcm)
+    {
+        ObjectDisposedException.ThrowIf(_handle == IntPtr.Zero, this);
+        fixed (short* output = pcm)
+        {
+            return OpusNative.Decode(_handle, null, 0, output, pcm.Length, 0);
+        }
+    }
+
     public void Dispose()
     {
         if (_handle != IntPtr.Zero)

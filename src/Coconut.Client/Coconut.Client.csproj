@@ -3,6 +3,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Coconut.Media.Native\Coconut.Media.Native.csproj" />
     <ProjectReference Include="..\Coconut.Signaling.Contracts\Coconut.Signaling.Contracts.csproj" />
+    <ProjectReference Include="..\Coconut.Audio\Coconut.Audio.csproj" />
   </ItemGroup>
 
   <PropertyGroup>
