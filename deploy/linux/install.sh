@@ -19,7 +19,22 @@ HERE="$(cd "$(dirname "$0")" && pwd)"
 APP_DIR=/opt/coconut-signaling
 
 echo "==> Pacotes básicos"
-apt-get update -y
+# VMs sem rota IPv6 (ex.: Oracle Cloud) travam ao tentar repositórios por IPv6: força IPv4 no APT.
+if ! ip -6 route show default 2>/dev/null | grep -q .; then
+  echo 'Acquire::ForceIPv4 "true";' > /etc/apt/apt.conf.d/99coconut-ipv4
+fi
+# Espelhos regionais de nuvem às vezes ficam fora do ar ("no longer has a Release file"):
+# nesse caso, usa o arquivo oficial do Ubuntu.
+if ! apt-get update -y; then
+  if grep -rqs "clouds.archive.ubuntu.com" /etc/apt/sources.list /etc/apt/sources.list.d/; then
+    echo "Espelho de nuvem indisponível; trocando por archive.ubuntu.com"
+    sed -i -E 's#http://[a-z0-9-]+\.clouds\.archive\.ubuntu\.com/ubuntu/?#http://archive.ubuntu.com/ubuntu/#g' \
+      /etc/apt/sources.list.d/*.sources /etc/apt/sources.list 2>/dev/null || true
+    apt-get update -y
+  else
+    exit 1
+  fi
+fi
 apt-get install -y curl debian-keyring debian-archive-keyring apt-transport-https gpg
 
 echo "==> Caddy (repositório oficial)"

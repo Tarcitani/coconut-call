@@ -7,7 +7,7 @@ Passos marcados **(você)** exigem a sua conta ou o painel do provedor; o Coconu
 ## 1. Criar a VM (você)
 Exemplo com o nível *Always Free* da Oracle Cloud (qualquer VM Ubuntu 22.04/24.04 com IP público serve):
 - Imagem **Ubuntu 24.04** (Canonical).
-- Formato **VM.Standard.A1.Flex** (ARM) com 1 OCPU e 6 GB — sobra para o servidor → use o pacote `linux-arm64`. Alternativa: **VM.Standard.E2.1.Micro** (AMD, 1 GB) → pacote `linux-x64`.
+- Formato **VM.Standard.A1.Flex** (ARM) com 1 OCPU e 6 GB → pacote `linux-arm64`. Se der *"Capacidade insuficiente"* (aconteceu em São Paulo em 2026-11-16), use **VM.Standard.E2.1.Micro** (AMD, 1 GB, também gratuito) → pacote `linux-x64`; o servidor usa ~90 MB.
 - Acesso **só por chave SSH** (gere com `ssh-keygen -t ed25519`); nunca senha.
 - Anote o **IP público** da VM.
 
@@ -39,6 +39,11 @@ dotnet run --project prototypes/Tools.StunCheck -- stun:203-0-113-7.sslip.io:347
 ```
 No app: **Avançado → Servidor de sinalização** = `wss://203-0-113-7.sslip.io/ws`. O app usa automaticamente o STUN do mesmo host.
 
+Teste de ponta a ponta com o app real (abre o app por ~20 s):
+```
+powershell -NoProfile -ExecutionPolicy Bypass -File prototypes\Tools.UiSmoke\ui-smoke.ps1 -Server wss://203-0-113-7.sslip.io/ws
+```
+
 ## 6. Atualizar
 Repita os passos 3 e 4: o `install.sh` é idempotente (substitui os binários e reinicia o serviço).
 
@@ -53,4 +58,5 @@ Repita os passos 3 e 4: o `install.sh` é idempotente (substitui os binários e 
 - **Gratuidade não é permanente nem garantida.** A Oracle reduziu o nível gratuito ARM para 1.500 horas de OCPU e 9.000 GB-hora por mês (equivalente a 2 OCPUs e 12 GB) — [Always Free Resources](https://docs.oracle.com/en-us/iaas/Content/FreeTier/resourceref.htm).
 - **VM ociosa pode ser recuperada.** A mesma página: instâncias *Always Free* são consideradas ociosas se, por 7 dias, CPU (percentil 95), rede e memória (A1) ficarem abaixo de 20%, e podem ser recuperadas. Um servidor de sinalização pouco usado se encaixa nisso. A página não informa se contas *Pay As You Go* ficam isentas. Se a VM for recriada, o IP — e portanto o endereço `sslip.io` — muda, e cada pessoa precisa atualizar o servidor no app.
 - **Dependência do `sslip.io`** para o nome (serviço gratuito de terceiros); um domínio próprio elimina essa dependência.
-- **Não testado pelo autor desta documentação:** a instalação numa VM real. O pacote foi gerado e verificado (binários ELF ARM64/x86-64, scripts em LF, sintaxe do `install.sh`), mas a execução no Linux depende do primeiro uso.
+- **Validado numa VM real** (Oracle E2.1.Micro, São Paulo, 2026-11-16): TLS, STUN e app de ponta a ponta — [evidência](../benchmarks/2026-11-16-implantacao-vm.md). O `install.sh` contorna o espelho Ubuntu regional da Oracle quando ele está fora do ar. O pacote ARM64 ainda não foi executado numa VM real.
+- Ao ler o IP no console, use o botão "Copiar": um dígito trocado leva o SSH a outra máquina.

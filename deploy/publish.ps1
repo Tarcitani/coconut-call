@@ -29,7 +29,9 @@ foreach ($file in "install.sh", "Caddyfile", "coconut-signaling.service") {
 # O tar do Windows não grava permissão de execução: o guia chama "sudo bash install.sh",
 # e o próprio install.sh aplica chmod no binário do servidor.
 if (Test-Path $archive) { Remove-Item $archive -Force }
-tar -czf $archive -C (Split-Path $stage) (Split-Path $stage -Leaf)
+# tar.exe do Windows (bsdtar): o GNU tar do Git Bash/MSYS interpreta "C:\..." como host remoto.
+$tar = Join-Path $env:SystemRoot "System32\tar.exe"
+& $tar -czf $archive -C (Split-Path $stage) (Split-Path $stage -Leaf)
 if ($LASTEXITCODE -ne 0) { throw "tar falhou" }
 
 $size = [Math]::Round((Get-Item $archive).Length / 1MB, 1)

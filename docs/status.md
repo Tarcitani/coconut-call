@@ -32,12 +32,13 @@ Atualizado: 2026-11-16
 
 - **Pronto para hospedagem** ([ADR 0005](adr/0005-hospedagem.md), [guia](deploy/vm-gratuita.md)): STUN próprio no servidor (RFC 5389, dual-stack, limite por origem; 16 testes; libdatachannel obtém `srflx` dele, controle negativo não obtém), cabeçalhos encaminhados só de proxy loopback (testado contra forja), app deriva `stun:<host>:3478` do servidor, pacotes autocontidos `linux-arm64`/`linux-x64` (binários ELF conferidos), systemd isolado, Caddy com TLS automático, nome via `sslip.io`.
 
+- **Servidor no ar** numa VM Oracle *Always Free* (E2.1.Micro, São Paulo) do usuário — endereço fora do repositório público. Verificado pela internet: TLS Let's Encrypt, STUN (`srflx`), app real + bot de ponta a ponta pela sinalização na nuvem ([evidência](benchmarks/2026-11-16-implantacao-vm.md)).
+
 ## O que falta para duas pessoas conversarem
-O app funciona de ponta a ponta **numa máquina**, e o servidor está pronto para ser implantado. Falta:
-1. **(você)** Criar a VM gratuita e liberar portas no painel do provedor — [guia, passos 1–2](deploy/vm-gratuita.md).
-2. Implantar e verificar (`healthz`, `Tools.StunCheck`) — passos 3–5; **nunca executado numa VM real ainda**.
-3. Chamada real entre duas pessoas em redes diferentes: qualidade, eco, latência e taxa de sucesso P2P (NAT/CGNAT).
-4. Depois: tela (P4), bandeja/protocolo/instância única (P5), instalador/atualizador (P7).
+Tudo está pronto para a primeira chamada real. Falta:
+1. **Teste com duas pessoas em redes diferentes:** cada uma roda o app, põe o servidor em **Avançado**, uma cria a sala e manda o link. Medir: conexão P2P (NAT/CGNAT), qualidade, eco, latência.
+2. Distribuição do app para quem não compila: instalador (P7). Até lá, a pasta de build pode ser copiada.
+3. Depois: tela (P4), bandeja/protocolo/instância única (P5).
 
 ## Decisões pendentes do usuário
 - Nenhuma bloqueante. Decidido em 2026-11-16: modo de comunicação com AEC (ADR 0004); VM gratuita na nuvem (ADR 0005).

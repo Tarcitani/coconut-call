@@ -1,9 +1,16 @@
-# Teste de fumaça da UI (local): servidor + app + bot sem áudio, dirigido por UI Automation.
+﻿# Teste de fumaça da UI (local): servidor + app + bot sem áudio, dirigido por UI Automation.
 # Requer: dotnet build Coconut.slnx. Abre o app na área de trabalho por ~20 s e captura o microfone
 # durante a chamada de teste (o áudio só vai ao bot, em loopback, e é descartado). Nada é gravado.
-# Uso: powershell -NoProfile -ExecutionPolicy Bypass -File prototypes\Tools.UiSmoke\ui-smoke.ps1
-param([string]$Repo = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path)
+# Uso: powershell -NoProfile -ExecutionPolicy Bypass -File prototypes\Tools.UiSmoke\ui-smoke.ps1 [-Server wss://host/ws]
+#   Sem -Server: sobe um servidor local. Com -Server: usa o servidor remoto (o endereço é gravado
+#   temporariamente nas configurações do app e o arquivo original é restaurado no fim).
+param(
+    [string]$Repo = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path,
+    [string]$Server = ""
+)
 $ErrorActionPreference = "Stop"
+$app = $null
+$bot = $null
 $tools = $PSScriptRoot
 $out = Join-Path $PSScriptRoot ("runs\" + (Get-Date -Format "yyyyMMdd-HHmmss"))
 New-Item -ItemType Directory -Force $out | Out-Null
@@ -25,14 +32,29 @@ function Invoke-Named($root, $name) {
 }
 function Shot($proc, $file) { & (Join-Path $tools "capture-window.ps1") -ProcessId $proc.Id -Output (Join-Path $out $file) }
 
-# 1. Servidor de sinalização local
+# 1. Servidor de sinalização: local ou remoto
 Get-Process Coconut -ErrorAction SilentlyContinue | Stop-Process -Force
-$serverDll = Join-Path $Repo "src\Coconut.Signaling.Server\bin\Debug\net10.0\Coconut.Signaling.Server.dll"
-$server = Start-Process dotnet -ArgumentList @($serverDll, "--urls", "http://127.0.0.1:5080") -PassThru -WindowStyle Hidden `
-    -RedirectStandardOutput (Join-Path $out "server.out.txt") -RedirectStandardError (Join-Path $out "server.err.txt")
+$localServer = $null  # nome distinto: variáveis do PowerShell ignoram maiúsculas ($Server == $server)
+$settingsPath = Join-Path $env:LOCALAPPDATA "Coconut\settings.json"
+$settingsBackup = $null
+if ($Server) {
+    $signalingUrl = $Server
+    $health = ($Server -replace '^wss://', 'https://' -replace '^ws://', 'http://') -replace '/ws$', '/healthz'
+    if (Test-Path $settingsPath) { $settingsBackup = [System.IO.File]::ReadAllText($settingsPath) }
+    $settings = if ($settingsBackup) { $settingsBackup | ConvertFrom-Json } else { [pscustomobject]@{} }
+    $settings | Add-Member -NotePropertyName ServerAddress -NotePropertyValue $Server -Force
+    New-Item -ItemType Directory -Force (Split-Path $settingsPath) | Out-Null
+    [System.IO.File]::WriteAllText($settingsPath, ($settings | ConvertTo-Json -Compress))
+} else {
+    $signalingUrl = "ws://127.0.0.1:5080/ws"
+    $health = "http://127.0.0.1:5080/healthz"
+    $serverDll = Join-Path $Repo "src\Coconut.Signaling.Server\bin\Debug\net10.0\Coconut.Signaling.Server.dll"
+    $localServer = Start-Process dotnet -ArgumentList @($serverDll, "--urls", "http://127.0.0.1:5080") -PassThru -WindowStyle Hidden `
+        -RedirectStandardOutput (Join-Path $out "server.out.txt") -RedirectStandardError (Join-Path $out "server.err.txt")
+}
 $ok = $false
-for ($i = 0; $i -lt 50 -and -not $ok; $i++) { try { $ok = (Invoke-WebRequest -UseBasicParsing http://127.0.0.1:5080/healthz).StatusCode -eq 200 } catch { Start-Sleep -Milliseconds 200 } }
-"servidor: $ok"
+for ($i = 0; $i -lt 50 -and -not $ok; $i++) { try { $ok = (Invoke-WebRequest -UseBasicParsing $health).StatusCode -eq 200 } catch { Start-Sleep -Milliseconds 200 } }
+"servidor ($signalingUrl): $ok"
 
 try {
     # 2. App
@@ -55,7 +77,7 @@ try {
 
     # 5. Segundo participante: bot sem áudio (nome sem espaços: Start-Process não põe aspas nos argumentos)
     $botDll = Join-Path $Repo "prototypes\Tools.CallBot\bin\Debug\net10.0\Tools.CallBot.dll"
-    $bot = Start-Process dotnet -ArgumentList @($botDll, "ws://127.0.0.1:5080/ws", $invite, "BotTeste", "40") -PassThru -WindowStyle Hidden `
+    $bot = Start-Process dotnet -ArgumentList @($botDll, $signalingUrl, $invite, "BotTeste", "40") -PassThru -WindowStyle Hidden `
         -RedirectStandardOutput (Join-Path $out "bot.out.txt") -RedirectStandardError (Join-Path $out "bot.err.txt")
     Start-Sleep -Seconds 4
     Shot $app "2-com-bot.png"
@@ -77,5 +99,11 @@ try {
     "capturas em $out"
 }
 finally {
-    Stop-Process -Id $server.Id -Force -ErrorAction SilentlyContinue
+    # Mesmo se algo falhar no meio: nada fica aberto (app, bot, servidor local).
+    if ($app -and -not $app.HasExited) { $app.Kill() }
+    if ($bot -and -not $bot.HasExited) { $bot.Kill() }
+    if ($localServer) { Stop-Process -Id $localServer.Id -Force -ErrorAction SilentlyContinue }
+    if ($Server) {
+        if ($null -ne $settingsBackup) { [System.IO.File]::WriteAllText($settingsPath, $settingsBackup) } else { Remove-Item $settingsPath -ErrorAction SilentlyContinue }
+    }
 }
