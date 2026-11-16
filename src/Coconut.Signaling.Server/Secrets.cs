@@ -1,49 +1,16 @@
 using System.Security.Cryptography;
 using System.Text;
+using Coconut.Signaling.Contracts;
 
 namespace Coconut.Signaling.Server;
 
 /// <summary>Convites e tokens de sessão gerados por CSPRNG. Nenhum deles é registrado em log.</summary>
 internal static class Secrets
 {
-    // Base32 de Crockford: sem I, L, O, U — legível e fácil de ditar.
-    private const string InviteAlphabet = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
-    public const int InviteLength = 10; // 10 × 5 bits = 50 bits de entropia
-
-    public static string NewInviteCode() => RandomNumberGenerator.GetString(InviteAlphabet, InviteLength);
+    public static string NewInviteCode() => RandomNumberGenerator.GetString(InviteCode.Alphabet, InviteCode.Length);
 
     /// <summary>Normaliza o que o usuário digitou ou o que veio de um link; nulo se o formato for inválido.</summary>
-    public static string? NormalizeInvite(string? input)
-    {
-        if (string.IsNullOrWhiteSpace(input) || input.Length > 32)
-        {
-            return null;
-        }
-
-        var builder = new StringBuilder(InviteLength);
-        foreach (var raw in input)
-        {
-            if (raw is '-' or ' ')
-            {
-                continue;
-            }
-
-            var c = char.ToUpperInvariant(raw) switch
-            {
-                'O' => '0',
-                'I' or 'L' => '1',
-                var other => other,
-            };
-            if (!InviteAlphabet.Contains(c, StringComparison.Ordinal))
-            {
-                return null;
-            }
-
-            builder.Append(c);
-        }
-
-        return builder.Length == InviteLength ? builder.ToString() : null;
-    }
+    public static string? NormalizeInvite(string? input) => InviteCode.TryNormalize(input);
 
     /// <summary>Token de retomada: 256 bits, base64url.</summary>
     public static string NewResumeToken() => Base64Url(RandomNumberGenerator.GetBytes(32));

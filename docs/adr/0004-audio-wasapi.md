@@ -18,4 +18,6 @@ O MVP pede áudio natural com processamento mínimo, tratamento de eco, disposit
 - **WebRTC APM (AEC3) nativo:** acrescentaria processamento próprio e build nativo extra; o AEC do sistema atende enquanto não houver evidência de qualidade insuficiente.
 
 ## Consequências e limitação conhecida
-No modo Communications, o Windows também liga **supressão de ruído simples e controle automático de ganho**, sem permitir desligá-los (não ajustáveis no microfone testado). Para desligá-los seria preciso abrir mão do AEC (categoria padrão). Decisão de produto registrada em [status](../status.md).
+No modo Communications, o Windows também liga **supressão de ruído simples e controle automático de ganho**, sem permitir desligá-los (não ajustáveis no microfone testado). Para desligá-los seria preciso abrir mão do AEC (categoria padrão).
+
+**Decisão do usuário (2026-11-16):** manter o modo Communications com AEC; não oferecer modo "sem processamento" no MVP. A supressão por IA continua desligada.

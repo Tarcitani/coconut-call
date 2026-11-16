@@ -44,6 +44,9 @@ public sealed partial class MeshSession : IAsyncDisposable
 
     public long Epoch { get; private set; }
 
+    /// <summary>Administrador atual da sala, segundo o servidor.</summary>
+    public ParticipantId? Admin { get; private set; }
+
     public IReadOnlyList<PeerInfo> Roster { get; private set; } = [];
 
     public event Action? Admitted;
@@ -101,6 +104,11 @@ public sealed partial class MeshSession : IAsyncDisposable
     }
 
     public Task LeaveAsync() => _signaling.SendAsync(new LeaveRoom());
+
+    /// <summary>Só o administrador; o servidor valida e recusa os demais.</summary>
+    public Task KickAsync(ParticipantId target) => _signaling.SendAsync(new KickParticipant(target));
+
+    public Task EndRoomForAllAsync() => _signaling.SendAsync(new EndRoomForAll());
 
     public async ValueTask DisposeAsync()
     {
@@ -192,6 +200,10 @@ public sealed partial class MeshSession : IAsyncDisposable
             case RoomSnapshot m:
                 Epoch = m.Epoch;
                 Roster = m.Roster;
+                Admin = m.Admin;
+                break;
+            case AdminChanged m:
+                Admin = m.Admin;
                 break;
             case PeerLeft m:
                 Epoch = m.Epoch;

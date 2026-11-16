@@ -21,7 +21,10 @@ Independente do mod de Minecraft homônimo (`C:\MinecraftDev\Coconut`): não reu
 dotnet build Coconut.slnx
 dotnet test Coconut.slnx
 dotnet run --project src/Coconut.Signaling.Server --urls http://127.0.0.1:5080   # sinalização local (ws://127.0.0.1:5080/ws)
+src\Coconut.App\bin\Debug\net10.0-windows10.0.26100.0\win-x64\Coconut.exe       # app WinUI
+powershell -NoProfile -ExecutionPolicy Bypass -File prototypes\Tools.UiSmoke\ui-smoke.ps1   # fumaça de UI (abre o app)
 ```
+UI: views em `src/Coconut.App/Views` (uma área por arquivo, x:Bind a ViewModels de `Coconut.App.Core`); lógica e testes ficam no Core. Inspecione a UI em execução (capturas) — compilação não comprova layout.
 Repositório público: https://github.com/Tarcitani/coconut-call — publicar exige autorização do usuário.
 Nativos (vcpkg em `C:\Dev\tools\vcpkg`, ~7 min na primeira vez):
 ```

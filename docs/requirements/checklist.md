@@ -17,7 +17,7 @@ Fonte dos requisitos: prompt mestre do produto (contrato §1–§7). Evidências
 | ADM-3 | Sinalização × P2P × mídia operacional diferenciados | projetado | [Protocolo §2](../protocol/salas-e-admissao.md) |
 | ROOM-1 | Salas e nomes temporários, sem contas | testado-unidade | Identidade = `ParticipantId` efêmero |
 | ROOM-2 | Encerramento automático da sala vazia com tolerância de reconexão | testado-unidade | `Empty_room_closes_only_after_reconnect_grace` |
-| ROOM-3 | Criador admin; expulsar; encerrar para todos | testado-unidade | `MembershipTests` (kick/end/revogação) |
+| ROOM-3 | Criador admin; expulsar; encerrar para todos | validado-local (expulsar) | `MembershipTests`; app real: administrador removeu participante pela UI ([fumaça](../benchmarks/2026-11-16-UI-fumaca-local.md)); encerrar para todos pela UI não exercitado |
 | ROOM-4 | Sucessão automática por antiguidade | testado-unidade | `Admin_succession_*`, `Seniority_survives_reconnection` |
 | ROOM-5 | Saída voluntária × desconexão temporária | testado-unidade | `Voluntary_leave_*`, `Reconnect_grace_expiry_*` |
 | ROOM-6 | Entrada por código e `coconut://join/CODIGO`; instância existente recebe convite | pendente | P5 |
@@ -34,4 +34,4 @@ Fonte dos requisitos: prompt mestre do produto (contrato §1–§7). Evidências
 | SEC-1 | Análise de ameaças | projetado | [Modelo de ameaças](../security/modelo-de-ameacas.md) (inicial) |
 | SEC-2 | Logs locais com retenção, exportação sanitizada e testes de sanitização | em andamento | Servidor: teste `Logs_never_contain_secrets_*`. Cliente (retenção, exportação) pendente |
 | PERF-1 | Benchmarks reprodutíveis | projetado | [Plano](../prototypes/plano.md) |
-| UI-1 | UI modular (MVVM/composição), Fluent, temas, acessibilidade | pendente | Aguarda P4/P5 |
+| UI-1 | UI modular (MVVM/composição), Fluent, temas, acessibilidade | implementado; validado-local (parcial) | `Coconut.App.Core` (ViewModels, 29 testes) + `Coconut.App` (views separadas, x:Bind, Mica, nomes de automação); fumaça de ponta a ponta com capturas; tema claro e leitor de tela não verificados |

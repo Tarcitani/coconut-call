@@ -1,0 +1,26 @@
+<UserControl
+    x:Class="Coconut.App.Views.DeviceSettingsView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- Escolha de microfone e saída; troca a quente durante a chamada. -->
+    <StackPanel Width="300" Spacing="12">
+        <ComboBox
+            HorizontalAlignment="Stretch"
+            DisplayMemberPath="Name"
+            Header="Microfone"
+            ItemsSource="{x:Bind ViewModel.CaptureDevices, Mode=OneWay}"
+            SelectedItem="{x:Bind ViewModel.SelectedCaptureDevice, Mode=TwoWay}" />
+        <ComboBox
+            HorizontalAlignment="Stretch"
+            DisplayMemberPath="Name"
+            Header="Saída de áudio"
+            ItemsSource="{x:Bind ViewModel.RenderDevices, Mode=OneWay}"
+            SelectedItem="{x:Bind ViewModel.SelectedRenderDevice, Mode=TwoWay}" />
+        <TextBlock
+            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+            Style="{StaticResource CaptionTextBlockStyle}"
+            Text="O cancelamento de eco do Windows fica ativo. Se um dispositivo for desconectado, o Coconut volta ao padrão do sistema."
+            TextWrapping="WrapWholeWords" />
+    </StackPanel>
+</UserControl>

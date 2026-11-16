@@ -21,6 +21,8 @@ Atualizado: 2026-11-16
 
 - **Áudio** (`src/Coconut.Audio`, `src/Coconut.Client/Voice`, [ADR 0004](adr/0004-audio-wasapi.md)): interop WASAPI própria (48 kHz mono, conversão pelo Windows), catálogo de dispositivos com notificações, categoria Communications com AEC e referência apontada à saída, **supressão de ruído por IA desligada** (confirmado pelo Windows), jitter buffer com ocultação de perda, mixer, motor de voz com mudo antes do codificador, troca de dispositivo e recuperação. 23 testes (mudo provado por mutação) e sonda em hardware real ([P3](benchmarks/2026-11-16-P3-audio-local.md)).
 
+- **App WinUI 3** (`src/Coconut.App`, `src/Coconut.App.Core`): Windows App SDK 2.6.5 autocontido, não empacotado, compilado pelo `dotnet` CLI. Tela inicial (nome, criar, entrar por código ou `coconut://join/…`, aviso de IP, servidor em "Avançado"), chamada (participantes com indicador de fala, convite copiável, mudo, nível do microfone, dispositivos, sair, remover e encerrar para todos se administrador). 29 testes de ViewModel; [teste de fumaça de ponta a ponta](benchmarks/2026-11-16-UI-fumaca-local.md) com app real, servidor e bot.
+
 ## Validação pendente
 - P1 entre redes distintas (NAT/CGNAT, IPv6) — depende de ambiente externo.
 - Perfil SRTP efetivamente negociado após habilitar AES-GCM (não observado no log).
@@ -28,13 +30,12 @@ Atualizado: 2026-11-16
 - Causa da queda rara de ICE antes do trickle (1 em ~4.200 enlaces, recuperada por renegociação) — ver P2.
 - `Coconut.Client` sem testes unitários próprios (coberto só pelo P2); quedas de enlaces já verificados não tratadas.
 
-## O app ainda não é utilizável
-Falta o caminho até a primeira chamada de voz real. Ordem planejada:
-1. ~~Interop + cliente de sinalização + malha P2P; P2~~ — concluído localmente.
-2. ~~Áudio real~~ — motor pronto e verificado em hardware; **falta uma chamada entre pessoas** para qualidade, eco e latência.
-3. **Próximo:** app WinUI 3 mínimo (criar/entrar por código, lista de participantes, mudo, escolha de dispositivos, sair), usando `MeshSession` + `VoiceEngine`.
-4. Depois: tela (P4), bandeja/protocolo/instância única (P5), instalador/atualizador (P7).
+## O que falta para duas pessoas conversarem
+O app funciona de ponta a ponta **numa máquina**. Entre computadores diferentes ainda não:
+1. **Sinalização alcançável com TLS:** o servidor recusa texto claro fora do loopback; é preciso hospedá-lo com certificado (decisão do usuário: onde hospedar, orçamento zero).
+2. **STUN:** sem ele, pares atrás de NAT não descobrem o endereço público. Plano: STUN próprio junto ao servidor (sem terceiros).
+3. Depois: chamada real entre pessoas (qualidade, eco, latência), tela (P4), bandeja/protocolo/instância única (P5), instalador/atualizador (P7).
 
 ## Decisões pendentes do usuário
-- **Processamento de voz do Windows:** no modo de comunicação (necessário para o cancelamento de eco), o Windows impõe supressão de ruído simples e controle automático de ganho, sem permitir desligá-los. Opções: (a) manter, recomendado para quem usa caixa de som; (b) oferecer uma opção "áudio sem processamento" que troca para o modo padrão — sem AEC e sem AGC (a supressão simples do microfone testado continua). A supressão por IA já está desligada em ambos.
+- Nenhuma no momento. Decidido em 2026-11-16: manter o modo de comunicação com AEC (ADR 0004).
 - Propostas futuras (sem urgência): rotação de convite pelo administrador e limite de tentativas de convite por origem.
