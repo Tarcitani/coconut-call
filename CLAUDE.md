@@ -25,6 +25,7 @@ src\Coconut.App\bin\Debug\net10.0-windows10.0.26100.0\win-x64\Coconut.exe       
 powershell -NoProfile -ExecutionPolicy Bypass -File prototypes\Tools.UiSmoke\ui-smoke.ps1   # fumaça de UI (abre o app)
 ```
 UI: views em `src/Coconut.App/Views` (uma área por arquivo, x:Bind a ViewModels de `Coconut.App.Core`); lógica e testes ficam no Core. Inspecione a UI em execução (capturas) — compilação não comprova layout.
+Implantação (VM gratuita, Caddy + STUN): `deploy\publish.ps1 -Runtime linux-arm64` e [guia](docs/deploy/vm-gratuita.md); scripts Linux em LF (`.gitattributes`).
 Repositório público: https://github.com/Tarcitani/coconut-call — publicar exige autorização do usuário.
 Nativos (vcpkg em `C:\Dev\tools\vcpkg`, ~7 min na primeira vez):
 ```

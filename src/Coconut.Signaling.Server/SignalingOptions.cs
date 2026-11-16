@@ -29,4 +29,6 @@ public sealed class SignalingOptions
     public TimeSpan TickInterval { get; set; } = TimeSpan.FromSeconds(1);
 
     public RoomOptions Room { get; set; } = new();
+
+    public Stun.StunOptions Stun { get; set; } = new();
 }

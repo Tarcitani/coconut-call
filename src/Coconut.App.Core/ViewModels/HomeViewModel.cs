@@ -14,12 +14,12 @@ public sealed partial class HomeViewModel : ObservableObject
 {
     private const int MaxNameLength = 32;
 
-    private readonly Func<ICallBackend> _backendFactory;
+    private readonly Func<Uri, ICallBackend> _backendFactory;
     private readonly ISettingsStore _settings;
     private readonly Action<ICallBackend> _onJoined;
     private CancellationTokenSource? _pending;
 
-    public HomeViewModel(Func<ICallBackend> backendFactory, ISettingsStore settings, Action<ICallBackend> onJoined)
+    public HomeViewModel(Func<Uri, ICallBackend> backendFactory, ISettingsStore settings, Action<ICallBackend> onJoined)
     {
         _backendFactory = backendFactory;
         _settings = settings;
@@ -96,7 +96,7 @@ public sealed partial class HomeViewModel : ObservableObject
         IsBusy = true;
         _settings.Save(_settings.Load() with { DisplayName = DisplayName.Trim(), ServerAddress = server.ToString() });
         using var pending = _pending = new CancellationTokenSource();
-        var backend = _backendFactory();
+        var backend = _backendFactory(server);
         try
         {
             var outcome = await enter(backend, server, pending.Token);

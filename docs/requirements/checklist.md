@@ -8,8 +8,8 @@ Fonte dos requisitos: prompt mestre do produto (contrato §1–§7). Evidências
 |---|---|---|---|
 | PLT-1 | C#/.NET LTS, Windows 11, WinUI 3 + Windows App SDK | projetado | .NET 10 SDK 10.0.404; WinAppSDK 2.6.5 escolhido ([auditoria §6](../research/auditoria-inicial.md)) |
 | PLT-2 | GPLv3 no código próprio; licenças de dependências verificadas | implementado | `LICENSE`; SIPSorcery rejeitada por licença ([ADR 0002](../adr/0002-pilha-webrtc.md)) |
-| NET-1 | Mídia somente P2P; sem SFU/TURN/relay | validado-local | [P1](../benchmarks/2026-11-16-P1-webrtc-local.md): sem servidores ICE, par host↔host, DTLS-SRTP; entre redes distintas pendente |
-| NET-2 | Sinalização com transporte seguro e autenticação de sessão | testado-integração | `Coconut.Signaling.Server.Tests` (64): handshake, tokens de retomada, revogação, limites, TLS fora do loopback; processo real em loopback verificado. WSS com certificado real e hospedagem pública pendentes |
+| NET-1 | Mídia somente P2P; sem SFU/TURN/relay | validado-local | [P1](../benchmarks/2026-11-16-P1-webrtc-local.md): sem servidores ICE, par host↔host, DTLS-SRTP; entre redes distintas pendente; STUN próprio (sem terceiros) testado e interoperando com a libdatachannel |
+| NET-2 | Sinalização com transporte seguro e autenticação de sessão | testado-integração | 83 testes do servidor (handshake, tokens, revogação, limites, TLS fora do loopback, cabeçalhos encaminhados só de proxy loopback). Implantação com Caddy/TLS preparada ([guia](../deploy/vm-gratuita.md)), não executada |
 | NET-3 | Até 15 participantes em malha completa | validado-local | [P2](../benchmarks/2026-11-16-P2-malha-local.md): 15 processos, 105 enlaces, áudio entre todos, 40/40; redes distintas e uplink com tela pendentes |
 | NET-4 | Falhas de conexão compreensíveis; condições de rede documentadas | projetado | `AdmissionFailed` com pares afetados; auditoria §5 |
 | ADM-1 | Estado provisório, confirmação coordenada, timeout e rollback | testado-unidade | `AdmissionTests` (bilateral, timeout, falha, rollback preserva chamada) |

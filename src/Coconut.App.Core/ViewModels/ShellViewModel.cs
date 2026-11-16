@@ -9,7 +9,7 @@ public sealed partial class ShellViewModel : ObservableObject
     private readonly IUiDispatcher _ui;
     private readonly IClipboard _clipboard;
 
-    public ShellViewModel(Func<ICallBackend> backendFactory, ISettingsStore settings, IUiDispatcher ui, IClipboard clipboard)
+    public ShellViewModel(Func<Uri, ICallBackend> backendFactory, ISettingsStore settings, IUiDispatcher ui, IClipboard clipboard)
     {
         _ui = ui;
         _clipboard = clipboard;

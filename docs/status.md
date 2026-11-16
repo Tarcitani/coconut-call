@@ -30,12 +30,16 @@ Atualizado: 2026-11-16
 - Causa da queda rara de ICE antes do trickle (1 em ~4.200 enlaces, recuperada por renegociação) — ver P2.
 - `Coconut.Client` sem testes unitários próprios (coberto só pelo P2); quedas de enlaces já verificados não tratadas.
 
+- **Pronto para hospedagem** ([ADR 0005](adr/0005-hospedagem.md), [guia](deploy/vm-gratuita.md)): STUN próprio no servidor (RFC 5389, dual-stack, limite por origem; 16 testes; libdatachannel obtém `srflx` dele, controle negativo não obtém), cabeçalhos encaminhados só de proxy loopback (testado contra forja), app deriva `stun:<host>:3478` do servidor, pacotes autocontidos `linux-arm64`/`linux-x64` (binários ELF conferidos), systemd isolado, Caddy com TLS automático, nome via `sslip.io`.
+
 ## O que falta para duas pessoas conversarem
-O app funciona de ponta a ponta **numa máquina**. Entre computadores diferentes ainda não:
-1. **Sinalização alcançável com TLS:** o servidor recusa texto claro fora do loopback; é preciso hospedá-lo com certificado (decisão do usuário: onde hospedar, orçamento zero).
-2. **STUN:** sem ele, pares atrás de NAT não descobrem o endereço público. Plano: STUN próprio junto ao servidor (sem terceiros).
-3. Depois: chamada real entre pessoas (qualidade, eco, latência), tela (P4), bandeja/protocolo/instância única (P5), instalador/atualizador (P7).
+O app funciona de ponta a ponta **numa máquina**, e o servidor está pronto para ser implantado. Falta:
+1. **(você)** Criar a VM gratuita e liberar portas no painel do provedor — [guia, passos 1–2](deploy/vm-gratuita.md).
+2. Implantar e verificar (`healthz`, `Tools.StunCheck`) — passos 3–5; **nunca executado numa VM real ainda**.
+3. Chamada real entre duas pessoas em redes diferentes: qualidade, eco, latência e taxa de sucesso P2P (NAT/CGNAT).
+4. Depois: tela (P4), bandeja/protocolo/instância única (P5), instalador/atualizador (P7).
 
 ## Decisões pendentes do usuário
-- Nenhuma no momento. Decidido em 2026-11-16: manter o modo de comunicação com AEC (ADR 0004).
+- Nenhuma bloqueante. Decidido em 2026-11-16: modo de comunicação com AEC (ADR 0004); VM gratuita na nuvem (ADR 0005).
+- A considerar: VMs *Always Free* ociosas podem ser recuperadas pela Oracle (ver riscos no guia); conta *Pay As You Go* ou domínio próprio reduzem o impacto, mas envolvem cartão/cadastro.
 - Propostas futuras (sem urgência): rotação de convite pelo administrador e limite de tentativas de convite por origem.

@@ -1,5 +1,6 @@
 using System.Net;
 using Coconut.Signaling.Server;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -10,8 +11,17 @@ var options = builder.Configuration.GetSection("Signaling").Get<SignalingOptions
 builder.Services.AddSingleton(options);
 builder.Services.TryAddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<RoomRegistry>();
+builder.Services.AddSingleton<Coconut.Signaling.Server.Stun.StunResponder>();
+builder.Services.AddHostedService(sp => sp.GetRequiredService<Coconut.Signaling.Server.Stun.StunResponder>());
 
 var app = builder.Build();
+
+// Atrás de proxy reverso com TLS (Caddy na VM): usa o IP e o esquema do cliente informados pelo proxy.
+// Por padrão só proxies de loopback são confiáveis; um cliente direto não consegue forjar esses cabeçalhos.
+app.UseForwardedHeaders(new ForwardedHeadersOptions
+{
+    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto,
+});
 
 // Defesa por requisição: cobre a janela antes do TransportGuard encerrar e configurações inesperadas.
 app.Use((context, next) =>

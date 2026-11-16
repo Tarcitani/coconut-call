@@ -1,0 +1,4 @@
+# Arquivos executados no Linux da VM: sempre LF, mesmo com core.autocrlf no Windows.
+*.sh text eol=lf
+*.service text eol=lf
+deploy/linux/Caddyfile text eol=lf

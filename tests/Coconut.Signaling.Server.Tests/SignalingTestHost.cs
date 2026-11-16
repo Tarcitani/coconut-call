@@ -19,6 +19,7 @@ internal sealed class SignalingTestHost : IAsyncDisposable
     public SignalingTestHost(Action<SignalingOptions>? configure = null)
     {
         var options = new SignalingOptions { MaxRoomsPerAddress = 1000 };
+        options.Stun.Port = 0; // porta efêmera: hosts de teste em paralelo não disputam a 3478
         configure?.Invoke(options);
         _factory = new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
         {
@@ -32,6 +33,13 @@ internal sealed class SignalingTestHost : IAsyncDisposable
     }
 
     public ConcurrentQueue<string> Logs { get; } = new();
+
+    /// <summary>Porta UDP do STUN deste host (inicia o servidor se preciso).</summary>
+    public Task<int> StunPortAsync()
+    {
+        _ = _factory.Server; // hosted services sobem com o servidor
+        return _factory.Services.GetRequiredService<Coconut.Signaling.Server.Stun.StunResponder>().BoundPort;
+    }
 
     public async Task<TestClient> ConnectAsync()
     {

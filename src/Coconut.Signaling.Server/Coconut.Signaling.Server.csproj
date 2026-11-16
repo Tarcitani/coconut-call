@@ -1,6 +1,10 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
 
   <ItemGroup>
+    <InternalsVisibleTo Include="Coconut.Signaling.Server.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\Coconut.Signaling.Core\Coconut.Signaling.Core.csproj" />
   </ItemGroup>
 

@@ -17,6 +17,8 @@ Status: rascunho de 2026-11-16. Mitigações marcadas **(implementada)** têm te
 | Abuso de salas públicas | Sem diretório de salas; só por convite; capacidade 15 |
 | Links `coconut://` maliciosos | Validar formato estrito do código (alfabeto e tamanho), nunca executar/abrir conteúdo do link, confirmação visual antes de entrar |
 | Atualização adulterada | Manifesto assinado Ed25519 + hash por pacote; rejeição antes de executar (P7) |
+| STUN usado como refletor/amplificador | Só responde a Binding Request válido (resposta ≤ 44 bytes), limite por origem, nada para tráfego não STUN (implementada, testada) |
+| Forja de IP de origem atrás do proxy | `X-Forwarded-*` só aceito de proxy em loopback (Caddy na mesma VM); cliente direto não consegue forjar (testado) |
 | Exposição de IP entre pares | **Aceita pelo produto**; aviso claro antes da primeira entrada |
 | Vazamento em logs | Servidor registra só um identificador interno aleatório da sala; teste verifica ausência de convite, tokens, nomes, IPs e candidatos nos logs (implementada). Exportação sanitizada do cliente pendente |
 | Mídia | DTLS-SRTP nativo do WebRTC; fingerprints DTLS trafegam pela sinalização protegida por TLS |

@@ -9,9 +9,12 @@ public class HomeViewModelTests
     private readonly List<FakeBackend> _created = [];
     private readonly List<ICallBackend> _joined = [];
 
+    private List<Uri> Servers { get; } = [];
+
     private HomeViewModel Create(JoinOutcome outcome = JoinOutcome.Admitted) =>
-        new(() =>
+        new(server =>
         {
+            Servers.Add(server);
             var backend = new FakeBackend { Outcome = outcome };
             _created.Add(backend);
             return backend;
@@ -98,6 +101,7 @@ public class HomeViewModelTests
 
         Assert.Equal("Ana", _settings.Current.DisplayName);
         Assert.Equal("wss://sinal.exemplo/ws", _settings.Current.ServerAddress);
+        Assert.Equal(new Uri("wss://sinal.exemplo/ws"), Assert.Single(Servers)); // o backend recebe o servidor (e dele o STUN)
         Assert.Equal("Ana", Create().DisplayName);
     }
 
@@ -121,4 +125,16 @@ public class HomeViewModelTests
             Assert.False(string.IsNullOrWhiteSpace(UserMessages.For(outcome)), outcome.ToString());
         }
     }
+}
+
+public class ServerEndpointsTests
+{
+    [Theory]
+    [InlineData("ws://127.0.0.1:5080/ws", "")]
+    [InlineData("ws://localhost:5080/ws", "")]
+    [InlineData("ws://[::1]:5080/ws", "")]
+    [InlineData("wss://1-2-3-4.sslip.io/ws", "stun:1-2-3-4.sslip.io:3478")]
+    [InlineData("wss://sinal.exemplo:8443/ws", "stun:sinal.exemplo:3478")]
+    public void Stun_runs_on_the_signaling_host_except_for_local_servers(string signaling, string expected) =>
+        Assert.Equal(expected, string.Join(",", Coconut.App.Core.Services.ServerEndpoints.StunServersFor(new Uri(signaling))));
 }

@@ -8,7 +8,7 @@ public class ShellViewModelTests
     public async Task Joining_navigates_to_call_and_ending_returns_home_with_reason()
     {
         var backend = new FakeBackend();
-        var shell = new ShellViewModel(() => backend, new MemorySettings(), new ImmediateDispatcher(), new FakeClipboard());
+        var shell = new ShellViewModel(_ => backend, new MemorySettings(), new ImmediateDispatcher(), new FakeClipboard());
         shell.Home.DisplayName = "Ana";
 
         await shell.Home.CreateRoomCommand.ExecuteAsync(null);

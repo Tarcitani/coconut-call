@@ -1,0 +1,13 @@
+# Gerado a partir de deploy/linux/Caddyfile pelo install.sh (__DOMAIN__ é substituído).
+{
+	# Sem log de acesso (não há diretiva "log" no site) e só erros no log do Caddy: evita registrar IPs.
+	log {
+		level ERROR
+	}
+}
+
+__DOMAIN__ {
+	# TLS automático (Let's Encrypt). WebSocket é encaminhado pelo reverse_proxy, que envia X-Forwarded-For/Proto.
+	reverse_proxy 127.0.0.1:5080
+	header -Server
+}

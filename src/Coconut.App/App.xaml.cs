@@ -22,7 +22,7 @@ public partial class App : Application
         var devices = new AudioDeviceCatalog();
         var window = new MainWindow();
         var shell = new ShellViewModel(
-            () => new CallBackend(devices, new RtcPeerOptions()),
+            server => new CallBackend(devices, new RtcPeerOptions { StunServers = ServerEndpoints.StunServersFor(server) }),
             new JsonSettingsStore(),
             new DispatcherQueueUiDispatcher(window.DispatcherQueue),
             new WinUiClipboard());

@@ -129,6 +129,29 @@ public sealed class ProtectionTests
         Assert.Equal(expected, context.Response.StatusCode);
     }
 
+    [Theory]
+    // Proxy de loopback informa cliente externo em HTTPS → aceito (é o caso Caddy + TLS).
+    [InlineData("127.0.0.1", "203.0.113.9", "https", 200)]
+    // Proxy de loopback informa cliente externo em HTTP → recusado: prova que o IP encaminhado foi aplicado.
+    [InlineData("127.0.0.1", "203.0.113.9", "http", 403)]
+    // Cliente externo direto tentando forjar loopback/HTTPS → cabeçalhos ignorados, recusado.
+    [InlineData("198.51.100.1", "127.0.0.1", "https", 403)]
+    public async Task Forwarded_headers_are_trusted_only_from_loopback_proxy(string remote, string forwardedFor, string forwardedProto, int expected)
+    {
+        await using var host = new SignalingTestHost();
+
+        var context = await host.SendHttpAsync(c =>
+        {
+            c.Request.Path = "/healthz";
+            c.Request.Scheme = "http";
+            c.Connection.RemoteIpAddress = System.Net.IPAddress.Parse(remote);
+            c.Request.Headers["X-Forwarded-For"] = forwardedFor;
+            c.Request.Headers["X-Forwarded-Proto"] = forwardedProto;
+        });
+
+        Assert.Equal(expected, context.Response.StatusCode);
+    }
+
     [Fact]
     public async Task Unknown_resume_token_is_rejected()
     {
