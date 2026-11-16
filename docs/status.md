@@ -14,14 +14,20 @@ Atualizado: 2026-11-16
 - vcpkg em `C:\Dev\tools\vcpkg` (commit `8f363bdc`, autorizado pelo usuário); nativos compilados do código-fonte: libdatachannel 0.24.6 `[srtp]`, libsrtp 2.8.1 `[openssl]`, opus 1.6.1.
 - **P1 — sucesso local** (9/9 execuções): dois processos .NET, sem servidores ICE, DTLS-SRTP, canal de dados com eco, 150/150 quadros Opus decodificados com tom 440 Hz íntegro. [Evidência](benchmarks/2026-11-16-P1-webrtc-local.md). ADR 0002 aceito.
 
+- Repositório público: https://github.com/Tarcitani/coconut-call (publicação autorizada pelo usuário).
+- **Servidor de sinalização** (`src/Coconut.Signaling.Server`, ASP.NET Core): WebSocket `/ws`, um ator por sala sobre o núcleo, convites de 50 bits, tokens de retomada guardados como hash, limites de tamanho/taxa/handshake/salas por origem, TLS obrigatório fora do loopback. **64/64 testes de integração** (estáveis em 5 repetições), incluindo sanitização de logs. Processo real verificado em loopback (`/healthz` 200) e recusando HTTP em `0.0.0.0`.
+
 ## Validação pendente
 - P1 entre redes distintas (NAT/CGNAT, IPv6) — depende de ambiente externo.
 - Perfil SRTP efetivamente negociado após habilitar AES-GCM (não observado no log).
+- Servidor com WSS e certificado real (hospedagem pública futura).
 
-## Próximo
-1. Host de sinalização (ASP.NET Core, WebSocket/TLS, fila por sala, tokens de sessão, limites de taxa) sobre o núcleo.
-2. Extrair os bindings do P1 para `src/Coconut.Media.Native` e fazer o P2 (malha local de N processos usando o protocolo de admissão real).
-3. P5 (WinUI 3 não empacotado: bandeja, instância única, `coconut://`).
+## O app ainda não é utilizável
+Falta o caminho até a primeira chamada de voz real. Ordem planejada:
+1. `Coconut.Media.Native` (bindings extraídos do P1) + cliente de sinalização + gerenciador da malha P2P (aplica `connectToPeer`/`relay`/`reportLink`); P2 com N processos locais.
+2. Áudio real: captura e reprodução WASAPI (P3 decide AEC), Opus, jitter buffer, mudo efetivo na mídia.
+3. App WinUI 3 mínimo: criar/entrar por código, lista de participantes, mudo, sair.
+4. Depois: tela (P4), bandeja/protocolo/instância única (P5), instalador/atualizador (P7).
 
 ## Decisões pendentes do usuário
-- Nenhuma. Rotação de convite (mitigação de convite vazado) amplia levemente o escopo — será proposta com o host.
+- Nenhuma. Propostas futuras: rotação de convite pelo administrador e limite de tentativas de convite por origem.

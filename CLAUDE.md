@@ -20,7 +20,9 @@ Independente do mod de Minecraft homônimo (`C:\MinecraftDev\Coconut`): não reu
 ```
 dotnet build Coconut.slnx
 dotnet test Coconut.slnx
+dotnet run --project src/Coconut.Signaling.Server --urls http://127.0.0.1:5080   # sinalização local (ws://127.0.0.1:5080/ws)
 ```
+Repositório público: https://github.com/Tarcitani/coconut-call — publicar exige autorização do usuário.
 Nativos (vcpkg em `C:\Dev\tools\vcpkg`, ~7 min na primeira vez):
 ```
 C:\Dev\tools\vcpkg\vcpkg.exe install --x-manifest-root=native --x-install-root=native/vcpkg_installed --triplet x64-windows

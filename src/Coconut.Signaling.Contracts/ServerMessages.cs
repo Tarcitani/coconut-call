@@ -1,7 +1,56 @@
+using System.Text.Json.Serialization;
+
 namespace Coconut.Signaling.Contracts;
 
 /// <summary>Mensagem do servidor de sinalização para um cliente.</summary>
+[JsonPolymorphic(TypeDiscriminatorPropertyName = "type")]
+[JsonDerivedType(typeof(SessionEstablished), "sessionEstablished")]
+[JsonDerivedType(typeof(InviteInvalid), "inviteInvalid")]
+[JsonDerivedType(typeof(SessionInvalid), "sessionInvalid")]
+[JsonDerivedType(typeof(CommandRejected), "commandRejected")]
+[JsonDerivedType(typeof(Relayed), "relayed")]
+[JsonDerivedType(typeof(AdmissionStarted), "admissionStarted")]
+[JsonDerivedType(typeof(ConnectToPeer), "connectToPeer")]
+[JsonDerivedType(typeof(PeerAdmitted), "peerAdmitted")]
+[JsonDerivedType(typeof(AdmissionFailed), "admissionFailed")]
+[JsonDerivedType(typeof(DropPeer), "dropPeer")]
+[JsonDerivedType(typeof(PeerLeft), "peerLeft")]
+[JsonDerivedType(typeof(ParticipantReconnecting), "participantReconnecting")]
+[JsonDerivedType(typeof(ParticipantResumed), "participantResumed")]
+[JsonDerivedType(typeof(RoomSnapshot), "roomSnapshot")]
+[JsonDerivedType(typeof(RoomFull), "roomFull")]
+[JsonDerivedType(typeof(AdminChanged), "adminChanged")]
+[JsonDerivedType(typeof(Kicked), "kicked")]
+[JsonDerivedType(typeof(RoomEnded), "roomEnded")]
+[JsonDerivedType(typeof(ShareStateChanged), "shareStateChanged")]
+[JsonDerivedType(typeof(ShareRequested), "shareRequested")]
+[JsonDerivedType(typeof(ShareRequestPending), "shareRequestPending")]
+[JsonDerivedType(typeof(ShareRequestDeclined), "shareRequestDeclined")]
+[JsonDerivedType(typeof(ShareRequestExpired), "shareRequestExpired")]
+[JsonDerivedType(typeof(ShareRequestCanceled), "shareRequestCanceled")]
+[JsonDerivedType(typeof(ShareBusy), "shareBusy")]
+[JsonDerivedType(typeof(StopSharing), "stopSharing")]
 public abstract record ServerMessage;
+
+// ---- Sessão ----
+
+/// <summary>
+/// Resposta a CreateRoom/JoinRoom/ResumeSession. O token de retomada é segredo do cliente:
+/// permite voltar à mesma identidade dentro da tolerância de reconexão.
+/// </summary>
+public sealed record SessionEstablished(ParticipantId You, string ResumeToken, string InviteCode) : ServerMessage;
+
+/// <summary>Convite inexistente ou de sala encerrada (indistinguíveis de propósito).</summary>
+public sealed record InviteInvalid : ServerMessage;
+
+/// <summary>Token de retomada desconhecido, expirado ou revogado.</summary>
+public sealed record SessionInvalid : ServerMessage;
+
+/// <summary>Comando recusado. <paramref name="Reason"/> é um código estável (ex.: <c>NotAllowed</c>).</summary>
+public sealed record CommandRejected(string Command, string Reason) : ServerMessage;
+
+/// <summary>SDP ou candidato ICE encaminhado de outro membro.</summary>
+public sealed record Relayed(ParticipantId From, RelayKind Kind, string Payload) : ServerMessage;
 
 // ---- Admissão e composição ----
 

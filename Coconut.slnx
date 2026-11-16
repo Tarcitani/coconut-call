@@ -5,8 +5,10 @@
   <Folder Name="/src/">
     <Project Path="src/Coconut.Signaling.Contracts/Coconut.Signaling.Contracts.csproj" />
     <Project Path="src/Coconut.Signaling.Core/Coconut.Signaling.Core.csproj" />
+    <Project Path="src/Coconut.Signaling.Server/Coconut.Signaling.Server.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Coconut.Signaling.Core.Tests/Coconut.Signaling.Core.Tests.csproj" />
+    <Project Path="tests/Coconut.Signaling.Server.Tests/Coconut.Signaling.Server.Tests.csproj" />
   </Folder>
 </Solution>

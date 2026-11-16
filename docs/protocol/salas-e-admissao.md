@@ -82,7 +82,15 @@ Receptores só exibem vídeo do transmissor da **sessão vigente** anunciada pel
 
 ## 7. Mensagens
 
-Definidas em `src/Coconut.Signaling.Contracts/ServerMessages.cs`. Mensagens cliente→servidor e o envelope de transporte serão definidos com o host WebSocket (próximo incremento).
+Contratos em `src/Coconut.Signaling.Contracts/` (`ClientMessages.cs`, `ServerMessages.cs`); serialização única em `SignalingJson` (JSON, discriminador `type`, IDs como string GUID). Servidor em `src/Coconut.Signaling.Server/`.
+
+**Transporte:** WebSocket em `/ws`, uma mensagem JSON de texto por quadro. Texto claro só em loopback; fora dele o servidor exige HTTPS/WSS (recusa iniciar e, por requisição, responde 403).
+
+**Handshake:** a primeira mensagem, em até 10 s, deve ser `createRoom`, `joinRoom` (convite de 10 caracteres base32 de Crockford; aceita minúsculas, hífens e espaços) ou `resumeSession` (token de 256 bits; o servidor guarda só o SHA-256). A resposta é `sessionEstablished { you, resumeToken, inviteCode }`. Convite inexistente ou de sala encerrada → `inviteInvalid` (indistinguíveis); token desconhecido → `sessionInvalid`. Retomar fecha a conexão anterior do mesmo participante sem gerar perda de sinalização.
+
+**Comandos:** `reportLink`, `relay` (SDP/candidato opaco, ≤ 16 KiB, só entre membros — nunca interpretado nem registrado), `leaveRoom`, `kick`, `endRoom`, `requestShare`, `respondShare`, `cancelShare`, `shareStopped`. Recusa → `commandRejected { command, reason }` com o código de `CommandResult`.
+
+**Limites (padrões):** mensagem ≤ 64 KiB (`MessageTooBig`), 50 msg/s com rajada de 200 (`PolicyViolation "rate-limit"`), JSON inválido ou tipo desconhecido (`InvalidPayloadData`), fila de envio de 512 (cliente lento é desconectado), 3 salas abertas por endereço de origem (`RoomLimit`; endereço só em memória), nome de 1–32 caracteres sem caracteres de controle. Quem deixa de ser membro recebe a última mensagem e a conexão é encerrada.
 
 ## 8. Questões em aberto
 

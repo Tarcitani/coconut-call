@@ -9,7 +9,7 @@ Fonte dos requisitos: prompt mestre do produto (contrato §1–§7). Evidências
 | PLT-1 | C#/.NET LTS, Windows 11, WinUI 3 + Windows App SDK | projetado | .NET 10 SDK 10.0.404; WinAppSDK 2.6.5 escolhido ([auditoria §6](../research/auditoria-inicial.md)) |
 | PLT-2 | GPLv3 no código próprio; licenças de dependências verificadas | implementado | `LICENSE`; SIPSorcery rejeitada por licença ([ADR 0002](../adr/0002-pilha-webrtc.md)) |
 | NET-1 | Mídia somente P2P; sem SFU/TURN/relay | validado-local | [P1](../benchmarks/2026-11-16-P1-webrtc-local.md): sem servidores ICE, par host↔host, DTLS-SRTP; entre redes distintas pendente |
-| NET-2 | Sinalização com transporte seguro e autenticação de sessão | pendente | Host WebSocket/TLS é o próximo incremento |
+| NET-2 | Sinalização com transporte seguro e autenticação de sessão | testado-integração | `Coconut.Signaling.Server.Tests` (64): handshake, tokens de retomada, revogação, limites, TLS fora do loopback; processo real em loopback verificado. WSS com certificado real e hospedagem pública pendentes |
 | NET-3 | Até 15 participantes em malha completa | testado-unidade | `Full_mesh_of_fifteen_is_admitted`, `Capacity_counts_pending_participants`; rede real pendente (P2/P6) |
 | NET-4 | Falhas de conexão compreensíveis; condições de rede documentadas | projetado | `AdmissionFailed` com pares afetados; auditoria §5 |
 | ADM-1 | Estado provisório, confirmação coordenada, timeout e rollback | testado-unidade | `AdmissionTests` (bilateral, timeout, falha, rollback preserva chamada) |
@@ -32,6 +32,6 @@ Fonte dos requisitos: prompt mestre do produto (contrato §1–§7). Evidências
 | WIN-2 | Inicialização automática opcional (desligada), na bandeja, instância única | pendente | P5 |
 | DST-1 | Instalador e atualização automática verificada | pendente | P7 |
 | SEC-1 | Análise de ameaças | projetado | [Modelo de ameaças](../security/modelo-de-ameacas.md) (inicial) |
-| SEC-2 | Logs locais com retenção, exportação sanitizada e testes de sanitização | pendente | |
+| SEC-2 | Logs locais com retenção, exportação sanitizada e testes de sanitização | em andamento | Servidor: teste `Logs_never_contain_secrets_*`. Cliente (retenção, exportação) pendente |
 | PERF-1 | Benchmarks reprodutíveis | projetado | [Plano](../prototypes/plano.md) |
 | UI-1 | UI modular (MVVM/composição), Fluent, temas, acessibilidade | pendente | Aguarda P4/P5 |
