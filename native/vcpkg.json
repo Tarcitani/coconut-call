@@ -1,0 +1,20 @@
+{
+  "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
+  "name": "coconut-native",
+  "version-string": "0.0.0",
+  "description": "Dependências nativas do Coconut, compiladas a partir do código-fonte (ADR 0002).",
+  "builtin-baseline": "8f363bdc11359ede4bc51e5eb32a2617538049c8",
+  "dependencies": [
+    {
+      "name": "libdatachannel",
+      "default-features": false,
+      "features": [ "srtp" ]
+    },
+    {
+      "name": "libsrtp",
+      "features": [ "openssl" ],
+      "$comment": "Backend OpenSSL habilita perfis SRTP AES-GCM; sem ele a negociação cai para AES-CM-128/HMAC-SHA1-80."
+    },
+    "opus"
+  ]
+}
