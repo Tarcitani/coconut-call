@@ -26,6 +26,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File prototypes\Tools.UiSmoke\ui-
 ```
 UI: views em `src/Coconut.App/Views` (uma área por arquivo, x:Bind a ViewModels de `Coconut.App.Core`); lógica e testes ficam no Core. Inspecione a UI em execução (capturas) — compilação não comprova layout.
 Pacote do app (zip portátil, servidor pré-configurado; endereço real fica fora do repositório): `deploy\publish-app.ps1 -Version x.y.z [-Server wss://host/ws]` (release pública: sem `-Server`); testar extraído com `ui-smoke.ps1 -Server … -AppPath …\Coconut.exe -FreshSettings`.
+Diagnóstico de áudio: `Tools.CallBot <ws> <convite> nome 30 --audio` (envia tom, mede o recebido); log do app em `%LOCALAPPDATA%\Coconut\logs` (sanitizado).
 Implantação (VM gratuita, Caddy + STUN): `deploy\publish.ps1 -Runtime linux-arm64` e [guia](docs/deploy/vm-gratuita.md); scripts Linux em LF (`.gitattributes`).
 Repositório público: https://github.com/Tarcitani/coconut-call — publicar exige autorização do usuário.
 Nativos (vcpkg em `C:\Dev\tools\vcpkg`, ~7 min na primeira vez):

@@ -37,11 +37,14 @@ Atualizado: 2026-11-16
 - **Pacote portátil do app** (`deploy\publish-app.ps1 -Server …`): zip autocontido com servidor pré-configurado, runtime do VC++ local, LEIA-ME e licenças. Testado extraído, com configurações zeradas, contra a VM ([evidência](benchmarks/2026-11-16-pacote-app.md)). O teste revelou e corrigiu um laço infinito no servidor (segunda sala do mesmo endereço), já reimplantado.
 - **Release v0.1.0** (pré-lançamento, autorizada pelo usuário): https://github.com/Tarcitani/coconut-call/releases/tag/v0.1.0 — zip público **sem** servidor (cada pessoa informa em Avançado; testado extraído com servidor local). O zip com o servidor do usuário é distribuído só em particular.
 
+- **Primeira chamada real (0.1.0): admitidos, mas sem áudio nos dois sentidos.** Não reproduzido neste PC (app↔bot com áudio, dois apps, troca para o G435, pela nuvem: tudo funcionou). Causa não identificada; o app descartava erros de áudio em silêncio. 0.1.1 mostra falhas na tela e grava log local sanitizado ([investigação](benchmarks/2026-11-16-audio-chamada-real.md)).
+
 ## O que falta para duas pessoas conversarem
 Tudo está pronto para a primeira chamada real. Falta:
-1. **Teste com duas pessoas em redes diferentes:** mandar o zip (`artifacts\app\Coconut-win-x64.zip`); uma pessoa cria a sala e manda o convite. Medir: conexão P2P (NAT/CGNAT), qualidade, eco, latência.
-2. Instalador assinado e atualização verificada (P7); o zip não tem assinatura (SmartScreen avisa).
-3. Depois: tela (P4), bandeja/protocolo/instância única (P5).
+1. **Repetir a chamada real com 0.1.1** e trazer os dois logs (`%LOCALAPPDATA%\Coconut\logs`): eles dizem se o microfone capturou, se a saída tocou, se chegaram pacotes e por qual tipo de conexão.
+2. Supressão de ruído por IA volta ligada quando o microfone é reaberto (troca de dispositivo) — corrigir.
+3. Instalador assinado e atualização verificada (P7); o zip não tem assinatura (SmartScreen avisa).
+4. Depois: tela (P4), bandeja/protocolo/instância única (P5).
 
 ## Decisões pendentes do usuário
 - Nenhuma bloqueante. Decidido em 2026-11-16: modo de comunicação com AEC (ADR 0004); VM gratuita na nuvem (ADR 0005).

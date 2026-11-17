@@ -11,24 +11,40 @@ namespace Coconut.App.Core.Services;
 public sealed class CallBackend : ICallBackend
 {
     private static readonly TimeSpan AdmissionWait = TimeSpan.FromSeconds(30);
+    private static readonly TimeSpan StatsInterval = TimeSpan.FromSeconds(5);
 
     private readonly MeshSession _session;
     private readonly VoiceEngine _voice;
     private readonly TaskCompletionSource<JoinOutcome> _outcome = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private readonly AudioDeviceCatalog _catalog;
+    private readonly IDiagnosticLog _log;
+    private readonly CancellationTokenSource _stopStats = new();
     private int _admitted;
 
-    public CallBackend(AudioDeviceCatalog catalog, RtcPeerOptions rtcOptions)
+    public CallBackend(AudioDeviceCatalog catalog, RtcPeerOptions rtcOptions, IDiagnosticLog? log = null)
     {
         _catalog = catalog;
+        _log = log ?? NullDiagnosticLog.Instance;
         _session = new MeshSession(rtcOptions);
         _voice = new VoiceEngine(_session, catalog);
-        _voice.Problem += message => Problem?.Invoke(message);
+        _voice.Problem += message =>
+        {
+            _log.Write($"aviso ao usuário: {message}");
+            Problem?.Invoke(message);
+        };
+        _voice.Diagnostic += message => _log.Write($"voz: {message}");
+        _session.Diagnostic += message => _log.Write($"malha: {message}");
+        _session.LinkVerified += (peer, after) => _log.Write($"enlace com {peer} verificado em {after.TotalMilliseconds:0} ms");
         _session.MessageHandled += OnMessage;
         _session.Admitted += OnAdmitted;
-        _session.AdmissionRejected += _ => _outcome.TrySetResult(JoinOutcome.AdmissionFailed);
+        _session.AdmissionRejected += failure =>
+        {
+            _log.Write($"admissão recusada: {failure.Reason}");
+            _outcome.TrySetResult(JoinOutcome.AdmissionFailed);
+        };
         _session.Ended += reason =>
         {
+            _log.Write($"sessão encerrada: {reason}");
             if (!_outcome.TrySetResult(JoinOutcome.ServerUnavailable))
             {
                 Ended?.Invoke(reason);
@@ -82,8 +98,10 @@ public sealed class CallBackend : ICallBackend
 
     public async ValueTask DisposeAsync()
     {
+        await _stopStats.CancelAsync();
         await _voice.DisposeAsync();
         await _session.DisposeAsync();
+        _stopStats.Dispose();
     }
 
     private async Task<JoinOutcome> ConnectAsync(Func<Task> connect, CancellationToken cancellation)
@@ -115,13 +133,73 @@ public sealed class CallBackend : ICallBackend
     {
         if (Interlocked.Exchange(ref _admitted, 1) == 0)
         {
-            // Áudio começa só depois da admissão; falha de dispositivo não derruba a chamada.
+            _log.Write($"admitido; participantes: {_session.Roster.Count}");
+
+            // Áudio começa só depois da admissão; falha de dispositivo não derruba a chamada, mas
+            // nunca some em silêncio (antes, uma exceção aqui deixava a chamada muda sem aviso).
             _ = Task.Run(async () =>
             {
-                await _voice.StartAsync();
+                try
+                {
+                    await _voice.StartAsync();
+                }
+                catch (Exception ex)
+                {
+                    _log.Write($"voz: falha ao iniciar: {ex.GetType().Name} 0x{ex.HResult:X8}: {ex.Message}");
+                    Problem?.Invoke($"Não foi possível iniciar o áudio (código 0x{ex.HResult:X8}).");
+                }
+
                 Changed?.Invoke();
             });
+            _ = Task.Run(() => LogStatsAsync(_stopStats.Token));
             _outcome.TrySetResult(JoinOutcome.Admitted);
+        }
+    }
+
+    /// <summary>
+    /// A cada 5 s: o que saiu do microfone, o que a saída tocou e o que chegou de cada par. Responde
+    /// "onde o áudio parou" numa chamada real sem gravar conteúdo nem endereços.
+    /// </summary>
+    private async Task LogStatsAsync(CancellationToken stop)
+    {
+        using var timer = new PeriodicTimer(StatsInterval);
+        var connectionsLogged = new HashSet<ParticipantId>();
+        try
+        {
+            while (await timer.WaitForNextTickAsync(stop))
+            {
+                var sent = _voice.TransmitStats;
+                var received = _voice.Receiver.Stats;
+                var peers = received.Count == 0
+                    ? "nenhum pacote de ninguém"
+                    : string.Join("; ", received.Select(p =>
+                        $"{p.Key}: pacotes {p.Value.Received}, atrasados {p.Value.Late}, descartados {p.Value.Dropped}, " +
+                        $"ocultados {p.Value.Concealed}, faltas {p.Value.Underruns}"));
+                _log.Write(
+                    $"estatísticas: microfone capturou {sent.FramesCaptured}, codificou {sent.FramesEncoded}, mudo {sent.FramesSuppressedByMute}, " +
+                    $"entregas {sent.Deliveries}, nível {_voice.MicrophoneLevel:0}; saída tocou {_voice.Receiver.FramesProduced} quadros " +
+                    $"({(_voice.PlaybackInfo is null ? "saída FECHADA" : "saída aberta")}, {(_voice.CaptureInfo is null ? "microfone FECHADO" : "microfone aberto")}); " +
+                    $"pares na sala {_session.Roster.Count - 1}; recebido: {peers}");
+
+                // Tipo de conexão (host/srflx/prflx) por par, uma vez por par: diz se passou por NAT.
+                if (_session.Roster.Any(p => p.Id != _session.You && !connectionsLogged.Contains(p.Id)))
+                {
+                    foreach (var (peer, types) in await _session.GetSelectedCandidateTypesAsync())
+                    {
+                        if (types.Local != "unknown" && connectionsLogged.Add(peer))
+                        {
+                            _log.Write($"conexão com {peer}: local {types.Local}, remoto {types.Remote}");
+                        }
+                    }
+                }
+            }
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception ex)
+        {
+            _log.Write($"estatísticas interrompidas: {ex.GetType().Name}: {ex.Message}");
         }
     }
 

@@ -35,6 +35,9 @@ public sealed class VoiceEngine : IAsyncDisposable
     /// <summary>Mensagem legível para o usuário (ex.: microfone desconectado).</summary>
     public event Action<string>? Problem;
 
+    /// <summary>Registro técnico (dispositivo aberto, efeitos, falhas com código). Sem dados de rede.</summary>
+    public event Action<string>? Diagnostic;
+
     public event Action<bool>? MuteChanged;
 
     /// <summary>Dispositivo escolhido; nulo = segue o padrão de comunicação do Windows.</summary>
@@ -126,28 +129,60 @@ public sealed class VoiceEngine : IAsyncDisposable
                     DeviceId = SelectedCaptureId,
                     EchoReferenceRenderDeviceId = PlaybackInfo?.DeviceId ?? _catalog.DefaultDeviceId(AudioDirection.Render),
                 };
+                CaptureInfo = null;
                 (_capture, CaptureInfo) = await OpenOrFallback(
                     options, o => AudioCapture.StartAsync(_catalog, o, _transmitter.OnCapturedFrame), id => SelectedCaptureId = id);
-                _capture.Faulted += fault => _ = RecoverAsync(AudioDirection.Capture);
+                _capture.Faulted += fault =>
+                {
+                    Diagnostic?.Invoke($"microfone falhou em execução: {fault.GetType().Name} 0x{fault.HResult:X8}");
+                    _ = RecoverAsync(AudioDirection.Capture);
+                };
+                Diagnostic?.Invoke($"microfone aberto: {Describe(CaptureInfo, AudioDirection.Capture)}");
             }
             else
             {
                 _playback?.Dispose();
                 _playback = null;
+                PlaybackInfo = null;
                 (_playback, PlaybackInfo) = await OpenOrFallback(
                     new AudioStreamOptions { DeviceId = SelectedRenderId }, o => AudioPlayback.StartAsync(_catalog, o, _receiver.Produce), id => SelectedRenderId = id);
-                _playback.Faulted += fault => _ = RecoverAsync(AudioDirection.Render);
+                _playback.Faulted += fault =>
+                {
+                    Diagnostic?.Invoke($"saída falhou em execução: {fault.GetType().Name} 0x{fault.HResult:X8}");
+                    _ = RecoverAsync(AudioDirection.Render);
+                };
+                Diagnostic?.Invoke($"saída aberta: {Describe(PlaybackInfo, AudioDirection.Render)}");
             }
         }
         catch (AudioDeviceUnavailableException ex)
         {
+            Diagnostic?.Invoke($"{Name(direction)}: dispositivo indisponível ({ex.Message})");
             Problem?.Invoke(ex.Message);
+        }
+        catch (Exception ex) when (ex is not ObjectDisposedException)
+        {
+            // Antes, qualquer outra falha (ex.: acesso negado ao microfone, driver recusando o formato)
+            // sumia em silêncio e deixava a chamada sem áudio. Agora vira aviso visível e registro.
+            Diagnostic?.Invoke($"{Name(direction)}: falha ao abrir: {ex.GetType().Name} 0x{ex.HResult:X8}: {ex.Message}");
+            Problem?.Invoke(direction == AudioDirection.Capture
+                ? $"Não foi possível abrir o microfone (código 0x{ex.HResult:X8}). Verifique a privacidade do microfone no Windows ou escolha outro dispositivo."
+                : $"Não foi possível abrir a saída de áudio (código 0x{ex.HResult:X8}). Escolha outro dispositivo.");
         }
         finally
         {
             _reopen.Release();
         }
     }
+
+    private static string Name(AudioDirection direction) => direction == AudioDirection.Capture ? "microfone" : "saída";
+
+    /// <summary>Nome amigável vem do catálogo: o fluxo só conhece o ID do dispositivo.</summary>
+    private string Describe(AudioStreamInfo? info, AudioDirection direction) => info is null
+        ? "?"
+        : $"\"{_catalog.List(direction).FirstOrDefault(d => d.Id == info.DeviceId)?.Name ?? "?"}\" " +
+          $"({(info.DeviceId == _catalog.DefaultDeviceId(direction) ? "padrão de comunicação" : "escolhido")}), comunicação={info.CommunicationsCategory}, buffer {info.BufferMs:0.#} ms, " +
+          $"referência AEC={info.EchoReferenceControllable?.ToString() ?? "?"}, efeitos ligados: " +
+          string.Join("; ", info.Effects?.Where(e => e.IsOn).Select(e => e.Name) ?? ["?"]);
 
     /// <summary>Abre o escolhido; se ele não existir mais, volta ao padrão e avisa.</summary>
     private async Task<(T Stream, AudioStreamInfo Info)> OpenOrFallback<T>(

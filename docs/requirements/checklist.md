@@ -23,7 +23,7 @@ Fonte dos requisitos: prompt mestre do produto (contrato §1–§7). Evidências
 | ROOM-6 | Entrada por código e `coconut://join/CODIGO`; instância existente recebe convite | pendente | P5 |
 | AUD-1 | Microfone aberto com mudo efetivo validado na mídia | testado-unidade; validado-local (mudo) | `VoicePipelineTests`: mudo verificado no áudio decodificado, provado por mutação; P3: motor real com mudo = 0 pacotes. Chamada entre pessoas pendente |
 | AUD-2 | Opus, eco tratado, processamento mínimo | validado-local (parcial) | [ADR 0004](../adr/0004-audio-wasapi.md), [P3](../benchmarks/2026-11-16-P3-audio-local.md): AEC do Windows ativo, IA desligada; NS simples e AGC impostos pelo modo (decisão pendente); eco audível não avaliado |
-| AUD-3 | Dispositivos padrão, seleção manual, troca a quente, recuperação | implementado | `AudioDeviceCatalog` (notificações), `VoiceEngine` (seleção, troca, volta ao padrão); abertura real verificada no P3; desconexão física não testada |
+| AUD-3 | Dispositivos padrão, seleção manual, troca a quente, recuperação | implementado | `AudioDeviceCatalog` (notificações), `VoiceEngine` (seleção, troca, volta ao padrão); abertura real verificada no P3; troca para o G435 durante chamada verificada com bot ([chamada real](../benchmarks/2026-11-16-audio-chamada-real.md)); falhas agora visíveis; IA de ruído volta ligada ao reabrir (pendente); desconexão física não testada |
 | SCR-1 | Monitor inteiro, seleção multi-monitor | pendente | P4; máquina local tem 1 monitor |
 | SCR-2 | Resolução/FPS/bitrate configuráveis e adaptativos | pendente | P4/P6 |
 | SCR-3 | Um transmissor por sala; troca solicitar/aceitar/recusar/expirar/cancelar | testado-unidade | `ScreenShareTests` (15 casos) |
@@ -32,6 +32,6 @@ Fonte dos requisitos: prompt mestre do produto (contrato §1–§7). Evidências
 | WIN-2 | Inicialização automática opcional (desligada), na bandeja, instância única | pendente | P5 |
 | DST-1 | Instalador e atualização automática verificada | pendente | P7. Provisório: zip portátil sem assinatura, testado extraído contra a nuvem ([pacote](../benchmarks/2026-11-16-pacote-app.md)) |
 | SEC-1 | Análise de ameaças | projetado | [Modelo de ameaças](../security/modelo-de-ameacas.md) (inicial) |
-| SEC-2 | Logs locais com retenção, exportação sanitizada e testes de sanitização | em andamento | Servidor: teste `Logs_never_contain_secrets_*`. Cliente (retenção, exportação) pendente |
+| SEC-2 | Logs locais com retenção, exportação sanitizada e testes de sanitização | em andamento | Servidor: teste `Logs_never_contain_secrets_*`. Cliente: `FileDiagnosticLog` (7 dias, 5 MB/dia) + `LogSanitizer` (IPs, convites, tokens, SDP), 15 testes; log real conferido sem IPs/convites. Exportação pela UI pendente (hoje: pasta indicada no LEIA-ME) |
 | PERF-1 | Benchmarks reprodutíveis | projetado | [Plano](../prototypes/plano.md) |
 | UI-1 | UI modular (MVVM/composição), Fluent, temas, acessibilidade | implementado; validado-local (parcial) | `Coconut.App.Core` (ViewModels, 29 testes) + `Coconut.App` (views separadas, x:Bind, Mica, nomes de automação); fumaça de ponta a ponta com capturas; tema claro e leitor de tela não verificados |

@@ -15,6 +15,10 @@ public sealed class VoiceReceiver : IDisposable
     private readonly HashSet<ParticipantId> _departed = [];
     private readonly int[] _mix = new int[AudioFormat.FrameSamples];
     private readonly short[] _decoded = new short[OpusCodec.MaxFrameSamples];
+    private long _framesProduced;
+
+    /// <summary>Quadros de 20 ms entregues à saída desde o início (prova de que a reprodução está rodando).</summary>
+    public long FramesProduced => Interlocked.Read(ref _framesProduced);
 
     /// <summary>Nível RMS do último quadro reproduzido de cada par (indicador de fala).</summary>
     public IReadOnlyDictionary<ParticipantId, double> Levels
@@ -80,6 +84,7 @@ public sealed class VoiceReceiver : IDisposable
     /// <summary>Produz o próximo quadro de 20 ms da mistura de todos os pares.</summary>
     public void Produce(Span<short> output)
     {
+        Interlocked.Increment(ref _framesProduced);
         Array.Clear(_mix);
         lock (_gate)
         {

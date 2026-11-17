@@ -40,6 +40,14 @@ PRIVACIDADE (leia)
 - O servidor não recebe nem grava áudio, e não registra endereços IP.
   O app não grava as chamadas.
 
+SE ALGO DER ERRADO (por exemplo, vocês não se ouvem)
+- Avisos de microfone ou saída de áudio aparecem na própria tela da chamada.
+- O app guarda um registro técnico só no seu computador, por 7 dias. Para
+  abrir a pasta, cole isto na barra de endereço do Explorador de Arquivos:
+      %LOCALAPPDATA%\Coconut\logs
+  O registro não contém áudio, endereços IP nem convites. Mande o arquivo do
+  dia (coconut-AAAAMMDD.log) para quem te chamou: ele mostra onde o áudio parou.
+
 LIMITAÇÕES DESTA VERSÃO DE TESTE
 - Só voz: compartilhamento de tela ainda não existe.
 - Sem instalador nem atualização automática: para atualizar, apague a pasta e

@@ -16,6 +16,9 @@
     <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
     <!-- Sem isto o dotnet publish omite Coconut.pri e os .xbf (a UI não carrega no pacote). Não gera MSIX. -->
     <EnableMsixTooling>true</EnableMsixTooling>
+    <!-- Mesma pasta de saída ao compilar o projeto ou a solução (que passa Platform=x64): bin\Debug\…
+         Antes, a solução gravava em bin\x64\Debug e o exe documentado ficava desatualizado. -->
+    <AppendPlatformToOutputPath>false</AppendPlatformToOutputPath>
   </PropertyGroup>
 
   <ItemGroup>
