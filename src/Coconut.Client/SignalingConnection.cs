@@ -11,6 +11,15 @@ public sealed class SignalingConnection : IAsyncDisposable
     private readonly SemaphoreSlim _sendLock = new(1, 1);
     private readonly CancellationTokenSource _stop = new();
     private Task? _receiveLoop;
+    private int _disposed;
+
+    public SignalingConnection()
+    {
+        _socket.Options.KeepAliveInterval = TimeSpan.FromSeconds(10);
+        _socket.Options.KeepAliveTimeout = TimeSpan.FromSeconds(10);
+    }
+
+    public void Abort() => _socket.Abort();
 
     /// <summary>Mensagem recebida (chamado no laço de recepção, em ordem).</summary>
     public event Func<ServerMessage, Task>? MessageReceived;
@@ -46,6 +55,7 @@ public sealed class SignalingConnection : IAsyncDisposable
 
     public async ValueTask DisposeAsync()
     {
+        if (Interlocked.Exchange(ref _disposed, 1) != 0) { return; }
         await _stop.CancelAsync();
         if (_socket.State == WebSocketState.Open)
         {
@@ -84,6 +94,7 @@ public sealed class SignalingConnection : IAsyncDisposable
                     break;
                 }
 
+                if (result.MessageType != WebSocketMessageType.Text || message.Length + result.Count > 64 * 1024) { _socket.Abort(); break; }
                 message.Write(buffer, 0, result.Count);
                 if (!result.EndOfMessage)
                 {

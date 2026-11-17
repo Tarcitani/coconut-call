@@ -18,6 +18,8 @@ public sealed partial class HomeViewModel : ObservableObject
     private readonly ISettingsStore _settings;
     private readonly Action<ICallBackend> _onJoined;
     private CancellationTokenSource? _pending;
+    private Task _entry = Task.CompletedTask;
+    private bool _closing;
 
     public HomeViewModel(Func<Uri, ICallBackend> backendFactory, ISettingsStore settings, Action<ICallBackend> onJoined)
     {
@@ -80,11 +82,20 @@ public sealed partial class HomeViewModel : ObservableObject
         return EnterAsync((backend, server, ct) => backend.JoinRoomAsync(server, code, DisplayName.Trim(), ct));
     }
 
-    private bool CanCreate() => !IsBusy && IsNameValid;
+    private bool CanCreate() => !_closing && !IsBusy && IsNameValid;
 
     private bool CanJoin() => CanCreate() && IsInviteValid;
 
-    private async Task EnterAsync(Func<ICallBackend, Uri, CancellationToken, Task<JoinOutcome>> enter)
+    public async Task StopAsync()
+    {
+        _closing = true; _pending?.Cancel();
+        CreateRoomCommand.NotifyCanExecuteChanged(); JoinRoomCommand.NotifyCanExecuteChanged();
+        await _entry;
+    }
+
+    private Task EnterAsync(Func<ICallBackend, Uri, CancellationToken, Task<JoinOutcome>> enter) => _entry = EnterCoreAsync(enter);
+
+    private async Task EnterCoreAsync(Func<ICallBackend, Uri, CancellationToken, Task<JoinOutcome>> enter)
     {
         if (!Uri.TryCreate(ServerAddress.Trim(), UriKind.Absolute, out var server) || server.Scheme is not ("ws" or "wss"))
         {
@@ -100,14 +111,14 @@ public sealed partial class HomeViewModel : ObservableObject
         try
         {
             var outcome = await enter(backend, server, pending.Token);
-            if (outcome == JoinOutcome.Admitted)
+            if (outcome == JoinOutcome.Admitted && !pending.IsCancellationRequested && !_closing)
             {
                 InviteInput = string.Empty;
                 _onJoined(backend);
                 return;
             }
 
-            Error = UserMessages.For(outcome);
+            Error = outcome == JoinOutcome.AdmissionFailed ? backend.AdmissionFailureDescription ?? UserMessages.For(outcome) : UserMessages.For(outcome);
             await backend.DisposeAsync();
         }
         finally

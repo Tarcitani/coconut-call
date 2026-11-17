@@ -3,6 +3,7 @@
     <Project Path="prototypes/P1.WebRtcLoopback/P1.WebRtcLoopback.csproj" />
     <Project Path="prototypes/P2.MeshLocal/P2.MeshLocal.csproj" />
     <Project Path="prototypes/P3.AudioProbe/P3.AudioProbe.csproj" />
+    <Project Path="prototypes/P4.ScreenProbe/P4.ScreenProbe.csproj" />
     <Project Path="prototypes/Tools.CallBot/Tools.CallBot.csproj" />
     <Project Path="prototypes/Tools.StunCheck/Tools.StunCheck.csproj" />
   </Folder>
@@ -12,6 +13,8 @@
       <Platform Project="x64" />
     </Project>
     <Project Path="src/Coconut.Audio/Coconut.Audio.csproj" />
+    <Project Path="src/Coconut.Screen/Coconut.Screen.csproj" />
+    <Project Path="src/Coconut.Updates/Coconut.Updates.csproj" />
     <Project Path="src/Coconut.Client/Coconut.Client.csproj" />
     <Project Path="src/Coconut.Media.Native/Coconut.Media.Native.csproj" />
     <Project Path="src/Coconut.Signaling.Contracts/Coconut.Signaling.Contracts.csproj" />
@@ -21,7 +24,12 @@
   <Folder Name="/tests/">
     <Project Path="tests/Coconut.App.Core.Tests/Coconut.App.Core.Tests.csproj" />
     <Project Path="tests/Coconut.Audio.Tests/Coconut.Audio.Tests.csproj" />
+    <Project Path="tests/Coconut.Client.Tests/Coconut.Client.Tests.csproj" />
+    <Project Path="tests/Coconut.Updates.Tests/Coconut.Updates.Tests.csproj" />
     <Project Path="tests/Coconut.Signaling.Core.Tests/Coconut.Signaling.Core.Tests.csproj" />
     <Project Path="tests/Coconut.Signaling.Server.Tests/Coconut.Signaling.Server.Tests.csproj" />
+  </Folder>
+  <Folder Name="/tools/">
+    <Project Path="tools/Coconut.Release/Coconut.Release.csproj" />
   </Folder>
 </Solution>

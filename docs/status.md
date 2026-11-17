@@ -1,54 +1,39 @@
 # Estado atual
 
-Atualizado: 2026-11-16
+Atualizado: 2026-11-17 — MVP funcional 0.3.0, em pré-lançamento.
 
-## Concluído com evidência
-- Ambiente inspecionado; SDK .NET 10.0.404 e VS 2022 Build Tools (MSVC 14.44) instalados com autorização do usuário.
-- Auditoria inicial com fontes ([auditoria](research/auditoria-inicial.md)); ADRs 0001–0003.
-- Núcleo de sinalização (`src/Coconut.Signaling.Core`): admissão P2P, reconexão, administração, sucessão, expulsão, encerramento e troca de transmissor. **362/362 testes passando** (`dotnet test Coconut.slnx`, 2026-11-16), build sem avisos com analisadores `latest-recommended`:
-  - 45 testes de comportamento;
-  - 16 regressões da revisão independente (prazos aplicados em ordem cronológica a cada comando, sala encerrada quando a malha esvazia com pendentes, retomada do transmissor, motivo em `DropPeer`, identidade não reutilizável, difusões só para a malha);
-  - 300 sequências aleatórias com semente fixa checando invariantes a cada passo (admin ∈ malha, ≤ 1 transmissor e na malha, época monotônica, nenhuma mensagem a não envolvidos, admissão só com enlaces verificados) + verificação de que os caminhos de interesse são exercitados.
-- Revisão independente (agente revisor, 2026-11-16): sem defeitos graves; 10 achados médios/baixos, todos tratados (8 corrigidos com teste, 2 decididos e documentados no protocolo §6.7–8).
+## Implementado e testado
 
-- vcpkg em `C:\Dev\tools\vcpkg` (commit `8f363bdc`, autorizado pelo usuário); nativos compilados do código-fonte: libdatachannel 0.24.6 `[srtp]`, libsrtp 2.8.1 `[openssl]`, opus 1.6.1.
-- **P1 — sucesso local** (9/9 execuções): dois processos .NET, sem servidores ICE, DTLS-SRTP, canal de dados com eco, 150/150 quadros Opus decodificados com tom 440 Hz íntegro. [Evidência](benchmarks/2026-11-16-P1-webrtc-local.md). ADR 0002 aceito.
+- Voz Opus P2P em malha, admissão coordenada, administração, expulsão, sucessão e salas temporárias. Sinalização ASP.NET Core/WSS + STUN próprio, sem servidor de mídia/TURN/relay. Servidor do mantenedor já hospedado; endereço fora do repositório público.
+- Tela de monitor inteiro: WGC → D3D11 → Media Foundation H.264 (hardware com alternativa por software), RTP/SRTP, decode MF e `SwapChainPanel`. Seleção de monitor, resolução, FPS e bitrate; codificação única para até 14 receptores. Qualidade adaptativa por perda/RTT, parada por congestionamento persistente para liberar conexão para voz.
+- Um transmissor autorizado pelo servidor: solicitar, aceitar, recusar, cancelar e expirar; handover só após parar o anterior. Pacotes e frames vinculados ao peer autenticado e aos 128 bits da sessão. Entrada tardia recebe SPS/PPS no próximo IDR. Revogação limpa o vídeo imediatamente.
+- Retomada da sinalização com token em memória e tolerância do servidor; vídeo suspenso até snapshot autenticado. Renegociação de enlaces interrompidos, tentativas limitadas. UI diferencia sinalização, admissão, P2P e áudio decodificado.
+- Áudio WASAPI Communications/AEC, mudo antes do encoder, seleção/recuperação de dispositivos. Política de IA reaplicada na captura e monitorada após reabertura; erros visíveis. Trilhas de voz e tela separadas.
+- WinUI 3 modular, ícone original, bandeja (abrir/mudo/encerrar), fechar oculta, instância única por usuário, protocolo `coconut://join/…` sem autoentrada, inicialização opcional desligada por padrão. Exportação de logs sanitizados sem configurações/chaves/mídia.
+- Instalador offline Windows 11 x64 por usuário, runtimes incluídos, atualização preservando preferências. Atualização verifica manifesto Ed25519, tamanho e SHA-256 antes de executar; verificação/download automáticos e instalação por ação da pessoa, bloqueada em chamada. Não há Authenticode.
 
-- Repositório público: https://github.com/Tarcitani/coconut-call (publicação autorizada pelo usuário).
-- **Servidor de sinalização** (`src/Coconut.Signaling.Server`, ASP.NET Core): WebSocket `/ws`, um ator por sala sobre o núcleo, convites de 50 bits, tokens de retomada guardados como hash, limites de tamanho/taxa/handshake/salas por origem, TLS obrigatório fora do loopback. **84/84 testes de integração**, incluindo sanitização de logs. Processo real verificado em loopback (`/healthz` 200) e recusando HTTP em `0.0.0.0`.
+Arquitetura: [distribuição](distribuicao-windows.md), [ADR 0006](adr/0006-tela-e-integracao-windows.md), [protocolo](protocol/salas-e-admissao.md).
 
-- **Cliente e malha P2P** (`src/Coconut.Media.Native`, `src/Coconut.Client`): interop de produção (`RtcPeer` com registro de IDs seguro contra callbacks tardios; TURN recusado por construção), Opus, RTP, cliente de sinalização e `MeshSession` (segue o servidor, trickle ICE, verificação por eco, renegociação de enlaces que caem antes de verificados, áudio codificado uma vez e enviado a todos). **P2 — sucesso local**: N=2…15; com 15 processos entrando juntos, 40/40 execuções com 105 enlaces e áudio íntegro entre todos. [Evidência](benchmarks/2026-11-16-P2-malha-local.md).
+## Evidência atual
 
-- **Áudio** (`src/Coconut.Audio`, `src/Coconut.Client/Voice`, [ADR 0004](adr/0004-audio-wasapi.md)): interop WASAPI própria (48 kHz mono, conversão pelo Windows), catálogo de dispositivos com notificações, categoria Communications com AEC e referência apontada à saída, **supressão de ruído por IA desligada** (confirmado pelo Windows), jitter buffer com ocultação de perda, mixer, motor de voz com mudo antes do codificador, troca de dispositivo e recuperação. 23 testes (mudo provado por mutação) e sonda em hardware real ([P3](benchmarks/2026-11-16-P3-audio-local.md)).
+- `dotnet build Coconut.slnx -c Release`: sem avisos/erros. **568 testes**: núcleo 362, servidor 84, áudio 25, App.Core 63, cliente 22 e atualizações 12.
+- Captura real nos dois monitores locais (inclusive retrato), encoder de hardware e software, remontagem RTP e decode GPU.
+- Ensaio local com 15 participantes: 278 codificações únicas, todos os 14 receptores receberam/decodificaram 278 quadros, com áudio Opus simultâneo. Entrada tardia e perda/retomada de WebSocket exercitadas, com identidade preservada.
+- App real em dois perfis isolados: admissão, captura/recepção de áudio, compartilhamento exibido nos dois, pedido, aceite e troca de transmissor, parada limpando vídeo, expiração, fechar/reabrir mantendo chamada e inicialização oculta. Instalação 0.2 → 0.3 verificada com assinatura/hash, 495 arquivos iguais e preferências preservadas. Registro completo, comandos e limites em [validação do MVP](benchmarks/2026-11-17-mvp.md).
 
-- **App WinUI 3** (`src/Coconut.App`, `src/Coconut.App.Core`): Windows App SDK 2.6.5 autocontido, não empacotado, compilado pelo `dotnet` CLI. Tela inicial (nome, criar, entrar por código ou `coconut://join/…`, aviso de IP, servidor em "Avançado"), chamada (participantes com indicador de fala, convite copiável, mudo, nível do microfone, dispositivos, sair, remover e encerrar para todos se administrador). 39 testes (ViewModels e configurações); [teste de fumaça de ponta a ponta](benchmarks/2026-11-16-UI-fumaca-local.md) com app real, servidor e bot.
+## Validação externa ainda necessária
 
-## Validação pendente
-- P1 entre redes distintas (NAT/CGNAT, IPv6) — depende de ambiente externo.
-- Perfil SRTP efetivamente negociado após habilitar AES-GCM (não observado no log).
-- Servidor com WSS e certificado real (hospedagem pública futura).
-- Causa da queda rara de ICE antes do trickle (1 em ~4.200 enlaces, recuperada por renegociação) — ver P2.
-- `Coconut.Client` sem testes unitários próprios (coberto só pelo P2); quedas de enlaces já verificados não tratadas.
+- Chamada entre pessoas com 0.3.0 em máquinas/redes distintas; áudio audível, AEC, NAT/CGNAT/IPv6. A primeira chamada humana da 0.1.0 admitiu sem áudio; não foi reproduzida neste PC. Os novos indicadores/logs ajudam a localizar falhas, mas não comprovam que aquele cenário foi corrigido.
+- Windows limpo, Windows N com componentes de mídia, GPUs/drivers diferentes e desconexão física de dispositivos/monitores.
+- Matriz completa 720p/1080p × 15/30/60, latência boca-ouvido/captura-tela, CPU/GPU/uplink real e estabilidade de pelo menos duas horas. O ensaio com 15 é local, não comprova capacidade de upload de uma rede doméstica.
+- Tema claro, leitor de tela e revisão de acessibilidade completa.
+- Certificado Authenticode não configurado; SmartScreen pode avisar. Ed25519 protege a atualização, não assina o editor do executável.
+- Perfil SRTP efetivamente negociado não inspecionado. Limites adicionais de tentativas de convite e conexões simultâneas por origem permanecem propostas no modelo de ameaças.
 
-- **Pronto para hospedagem** ([ADR 0005](adr/0005-hospedagem.md), [guia](deploy/vm-gratuita.md)): STUN próprio no servidor (RFC 5389, dual-stack, limite por origem; 16 testes; libdatachannel obtém `srflx` dele, controle negativo não obtém), cabeçalhos encaminhados só de proxy loopback (testado contra forja), app deriva `stun:<host>:3478` do servidor, pacotes autocontidos `linux-arm64`/`linux-x64` (binários ELF conferidos), systemd isolado, Caddy com TLS automático, nome via `sslip.io`.
+Nenhuma decisão do usuário bloqueia o MVP funcional. Essas validações permanecem abertas e a versão é um pré-lançamento.
 
-- **Servidor no ar** numa VM Oracle *Always Free* (E2.1.Micro, São Paulo) do usuário — endereço fora do repositório público. Verificado pela internet: TLS Let's Encrypt, STUN (`srflx`), app real + bot de ponta a ponta pela sinalização na nuvem ([evidência](benchmarks/2026-11-16-implantacao-vm.md)).
+## Histórico e evidências anteriores
 
-- **Pacote portátil do app** (`deploy\publish-app.ps1 -Server …`): zip autocontido com servidor pré-configurado, runtime do VC++ local, LEIA-ME e licenças. Testado extraído, com configurações zeradas, contra a VM ([evidência](benchmarks/2026-11-16-pacote-app.md)). O teste revelou e corrigiu um laço infinito no servidor (segunda sala do mesmo endereço), já reimplantado.
-- **Release v0.1.0** (pré-lançamento, autorizada pelo usuário): https://github.com/Tarcitani/coconut-call/releases/tag/v0.1.0 — zip público **sem** servidor (cada pessoa informa em Avançado; testado extraído com servidor local). O zip com o servidor do usuário é distribuído só em particular.
+[P1 WebRTC](benchmarks/2026-11-16-P1-webrtc-local.md) · [P2 malha, 40/40 com 15 processos](benchmarks/2026-11-16-P2-malha-local.md) · [P3 áudio](benchmarks/2026-11-16-P3-audio-local.md) · [UI inicial](benchmarks/2026-11-16-UI-fumaca-local.md) · [hospedagem](benchmarks/2026-11-16-implantacao-vm.md) · [investigação áudio humano](benchmarks/2026-11-16-audio-chamada-real.md) · [instalador 0.2.0](benchmarks/2026-11-16-instalador-windows.md).
 
-- **Primeira chamada real (0.1.0): admitidos, mas sem áudio nos dois sentidos.** Não reproduzido neste PC (app↔bot com áudio, dois apps, troca para o G435, pela nuvem: tudo funcionou). Causa não identificada; o app descartava erros de áudio em silêncio. 0.1.1 mostra falhas na tela e grava log local sanitizado ([investigação](benchmarks/2026-11-16-audio-chamada-real.md)).
-
-- **Distribuição 0.2.0 — instalador offline Windows 11 x64**: `deploy/publish-installer.ps1` gera Setup (~48 MiB), zip e SHA-256 com .NET, WinUI, VC++ e nativos incluídos, sem exigir administrador. Atalhos, atualização manual e desinstalação; ícone original SVG/PNG/ICO no app e instalador; versão única em `VERSION`; README com download direto. **523/523 testes**. Instalação 0.1.1 → 0.2.0, reinstalação, 479 hashes no instalado/zip, atalhos e desinstalação preservando preferências verificados. Abertura e runtimes locais observados; captura visual inconclusiva. [Arquitetura/distribuição](distribuicao-windows.md), [evidência](benchmarks/2026-11-16-instalador-windows.md), [release v0.2.0](https://github.com/Tarcitani/coconut-call/releases/tag/v0.2.0). Pacote público continua sem servidor particular. Assinatura e atualização automática permanecem pendentes.
-
-## O que falta para duas pessoas conversarem
-Tudo está pronto para a primeira chamada real. Falta:
-1. **Repetir a chamada real com 0.1.1** e trazer os dois logs (`%LOCALAPPDATA%\Coconut\logs`): eles dizem se o microfone capturou, se a saída tocou, se chegaram pacotes e por qual tipo de conexão.
-2. Supressão de ruído por IA volta ligada quando o microfone é reaberto (troca de dispositivo) — corrigir.
-3. Assinar os pacotes e implementar atualização automática verificada (P7); o instalador 0.2.0 já funciona com atualização manual, mas ainda não tem assinatura (SmartScreen pode avisar). Validar também num Windows limpo.
-4. Depois: tela (P4), bandeja/protocolo/instância única (P5).
-
-## Decisões pendentes do usuário
-- Nenhuma bloqueante. Decidido em 2026-11-16: modo de comunicação com AEC (ADR 0004); VM gratuita na nuvem (ADR 0005).
-- A considerar: VMs *Always Free* ociosas podem ser recuperadas pela Oracle (ver riscos no guia); conta *Pay As You Go* ou domínio próprio reduzem o impacto, mas envolvem cartão/cadastro.
-- Propostas futuras (sem urgência): rotação de convite pelo administrador e limite de tentativas de convite por origem.
+Releases: https://github.com/Tarcitani/coconut-call/releases. A release pública não inclui o endereço particular do servidor.

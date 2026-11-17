@@ -187,6 +187,12 @@ public sealed class AudioCapture : AudioEndpointClient
     private readonly FrameAssembler _assembler;
     private IAudioCaptureClient? _capture;
     private IAudioEffectsManager? _effects;
+    private IReadOnlyList<AudioEffect>? _lastEffects;
+    private long _nextEffectsCheck;
+    private bool _effectWarningShown;
+
+    public event Action<IReadOnlyList<AudioEffect>>? EffectsChanged;
+    public event Action<string>? ProcessingProblem;
 
     /// <summary>Relê os efeitos aplicados pelo Windows (thread MTA; não usar na thread de UI).</summary>
     public IReadOnlyList<AudioEffect>? RefreshEffects() => _effects is null ? null : QueryEffects(_effects);
@@ -203,12 +209,24 @@ public sealed class AudioCapture : AudioEndpointClient
             return info;
         }
 
-        if (QueryEffects(_effects).FirstOrDefault(e => e.Id == AudioEffectNames.DeepNoiseSuppression) is { CanSetState: true, IsOn: true })
-        {
-            _effects.SetAudioEffectState(AudioEffectNames.DeepNoiseSuppression, 0); // AUDIO_EFFECT_STATE_OFF
-        }
+        ApplyEffectsPolicy();
+        return info with { Effects = _lastEffects ?? QueryEffects(_effects) };
+    }
 
-        return info with { Effects = QueryEffects(_effects) };
+    private void ApplyEffectsPolicy()
+    {
+        if (_effects is null || !_options.DisableAiNoiseSuppression) { return; }
+        try
+        {
+            var effects = AudioEffectPolicy.Enforce(() => QueryEffects(_effects), (id, enabled) => _effects.SetAudioEffectState(id, enabled ? 1 : 0), true);
+            if (_lastEffects is null || !_lastEffects.SequenceEqual(effects)) { _lastEffects = effects; EffectsChanged?.Invoke(effects); }
+            if (!_effectWarningShown && effects.Any(e => e.Id == AudioEffectPolicy.AiNoiseSuppression && e.IsOn && !e.CanSetState))
+            { if (ProcessingProblem is { } warn) { _effectWarningShown = true; warn("O driver mantém a supressão de ruído por IA ligada e não permite desligá-la neste microfone."); } }
+        }
+        catch (COMException ex)
+        {
+            if (!_effectWarningShown && ProcessingProblem is { } warn) { _effectWarningShown = true; warn($"Não foi possível confirmar o processamento do microfone (0x{ex.HResult:X8}). O áudio continua ativo."); }
+        }
     }
 
     private AudioCapture(AudioDeviceCatalog catalog, AudioStreamOptions options, Action<ReadOnlySpan<short>> onFrame)
@@ -289,6 +307,7 @@ public sealed class AudioCapture : AudioEndpointClient
 
             capture.ReleaseBuffer(frames);
         }
+        if (Environment.TickCount64 >= _nextEffectsCheck) { _nextEffectsCheck = Environment.TickCount64 + 500; ApplyEffectsPolicy(); }
     }
 }
 

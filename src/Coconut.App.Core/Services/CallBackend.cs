@@ -15,6 +15,7 @@ public sealed class CallBackend : ICallBackend
 
     private readonly MeshSession _session;
     private readonly VoiceEngine _voice;
+    private readonly Coconut.Client.Screen.ScreenShareController _screen;
     private readonly TaskCompletionSource<JoinOutcome> _outcome = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private readonly AudioDeviceCatalog _catalog;
     private readonly IDiagnosticLog _log;
@@ -26,6 +27,8 @@ public sealed class CallBackend : ICallBackend
         _catalog = catalog;
         _log = log ?? NullDiagnosticLog.Instance;
         _session = new MeshSession(rtcOptions);
+        _screen = new Coconut.Client.Screen.ScreenShareController(_session);
+        _screen.Problem += message => _log.Write($"tela: {message}");
         _voice = new VoiceEngine(_session, catalog);
         _voice.Problem += message =>
         {
@@ -36,10 +39,16 @@ public sealed class CallBackend : ICallBackend
         _session.Diagnostic += message => _log.Write($"malha: {message}");
         _session.LinkVerified += (peer, after) => _log.Write($"enlace com {peer} verificado em {after.TotalMilliseconds:0} ms");
         _session.MessageHandled += OnMessage;
+        _session.SignalingConnectivityChanged += connected =>
+        {
+            if (_admitted == 1) { Problem?.Invoke(connected ? "Conexão com o servidor retomada." : "Reconectando ao servidor. O áudio direto pode continuar; a tela será retomada após confirmar a sessão."); Changed?.Invoke(); }
+        };
         _session.Admitted += OnAdmitted;
         _session.AdmissionRejected += failure =>
         {
             _log.Write($"admissão recusada: {failure.Reason}");
+            AdmissionFailureDescription = failure.Reason == AdmissionFailure.RoomEmptied ? "A sala ficou vazia e foi encerrada enquanto você entrava. Peça um convite novo."
+                : "Não foi possível conectar diretamente a todos. " + string.Join("; ", failure.FailedPeers.Select(p => $"{p.DisplayName}: {(p.State == ParticipantState.Reconnecting ? "reconectando" : "enlace P2P não confirmado")}")) + ". Tente novamente; algumas redes bloqueiam P2P.";
             _outcome.TrySetResult(JoinOutcome.AdmissionFailed);
         };
         _session.Ended += reason =>
@@ -53,6 +62,20 @@ public sealed class CallBackend : ICallBackend
     }
 
     public event Action? Changed;
+
+    public Coconut.Client.Screen.IScreenSharing ScreenSharing => _screen;
+    public string? AdmissionFailureDescription { get; private set; }
+    public string ConnectionSummary => _session.IsSignalingConnected ? "Sinalização conectada · mídia direta entre os participantes" : "Reconectando a sinalização · a tela está pausada";
+    public IReadOnlyDictionary<ParticipantId, string> PeerConnectionStates
+    {
+        get
+        {
+            var stats = _voice.Receiver.Stats;
+            var decoded = _voice.Receiver.DecodedPeers;
+            return Roster.Where(p => p.Id != You).ToDictionary(p => p.Id, p => !_session.IsPeerVerified(p.Id) ? "Reconectando P2P…"
+                : decoded.Contains(p.Id) ? "P2P · áudio decodificado" : stats.TryGetValue(p.Id, out var audio) && audio.Received > 0 ? "P2P · pacotes recebidos" : "P2P · aguardando áudio");
+        }
+    }
 
     public event Action<string>? Problem;
 
@@ -99,6 +122,7 @@ public sealed class CallBackend : ICallBackend
     public async ValueTask DisposeAsync()
     {
         await _stopStats.CancelAsync();
+        await _screen.DisposeAsync();
         await _voice.DisposeAsync();
         await _session.DisposeAsync();
         _stopStats.Dispose();
@@ -180,6 +204,7 @@ public sealed class CallBackend : ICallBackend
                     $"entregas {sent.Deliveries}, nível {_voice.MicrophoneLevel:0}; saída tocou {_voice.Receiver.FramesProduced} quadros " +
                     $"({(_voice.PlaybackInfo is null ? "saída FECHADA" : "saída aberta")}, {(_voice.CaptureInfo is null ? "microfone FECHADO" : "microfone aberto")}); " +
                     $"pares na sala {_session.Roster.Count - 1}; recebido: {peers}");
+                if (_screen.Session is not null) { _log.Write($"tela: codificados {_screen.EncodedFrames}, bytes entregues {_screen.DeliveredBytes}, recebidos {_screen.ReceivedFrames}, decodificados {_screen.DecodedFrames}"); }
 
                 // Tipo de conexão (host/srflx/prflx) por par, uma vez por par: diz se passou por NAT.
                 if (_session.Roster.Any(p => p.Id != _session.You && !connectionsLogged.Contains(p.Id)))

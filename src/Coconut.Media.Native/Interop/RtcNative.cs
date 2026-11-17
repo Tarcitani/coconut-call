@@ -172,6 +172,9 @@ internal static unsafe partial class RtcNative
     [return: MarshalAs(UnmanagedType.U1)]
     public static partial bool IsOpen(int id);
 
+    [LibraryImport(Lib, EntryPoint = "rtcGetBufferedAmount")]
+    public static partial int GetBufferedAmount(int id);
+
     [LibraryImport(Lib, EntryPoint = "rtcDelete")]
     public static partial int Delete(int id);
 

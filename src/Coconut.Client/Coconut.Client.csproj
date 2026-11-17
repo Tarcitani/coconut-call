@@ -1,6 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
+    <ProjectReference Include="..\Coconut.Screen\Coconut.Screen.csproj" />
     <ProjectReference Include="..\Coconut.Media.Native\Coconut.Media.Native.csproj" />
     <ProjectReference Include="..\Coconut.Signaling.Contracts\Coconut.Signaling.Contracts.csproj" />
     <ProjectReference Include="..\Coconut.Audio\Coconut.Audio.csproj" />

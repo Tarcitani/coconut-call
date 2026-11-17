@@ -88,6 +88,7 @@ public class VoicePipelineTests
         var played = Run(tx, rx, 50, 440);
 
         Assert.Empty(wire.Timestamps);
+        Assert.Empty(rx.DecodedPeers);
         Assert.Equal(new TransmitStats(50, 0, 50, 0), tx.Stats);
         Assert.All(played, frame => Assert.Equal(0, AudioMixer.Rms(frame)));
     }
@@ -96,13 +97,15 @@ public class VoicePipelineTests
     public void Unmuted_tone_arrives_decoded_and_recognizable()
     {
         using var rx = new VoiceReceiver();
-        var wire = new Wire(rx, ParticipantId.New());
+        var peer = ParticipantId.New();
+        var wire = new Wire(rx, peer);
         using var tx = new VoiceTransmitter(wire.Send);
 
         var played = Run(tx, rx, 50, 440).Skip(10).SelectMany(f => f).ToArray();
 
         Assert.True(AudioMixer.Rms(played) > 1000, $"RMS {AudioMixer.Rms(played)}");
         Assert.True(Power(played, 440) > 100 * Power(played, 1000));
+        Assert.Contains(peer, rx.DecodedPeers);
     }
 
     [Fact]

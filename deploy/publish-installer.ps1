@@ -4,10 +4,12 @@ param(
     [string]$Version = (Get-Content (Join-Path $PSScriptRoot "..\VERSION") -Raw).Trim(),
     [ValidatePattern('^(wss://[^/\s]+/ws)?$')]
     [string]$Server = "",
-    [string]$InnoCompilerPath = ""
+    [string]$InnoCompilerPath = "",
+    [switch]$SignUpdate
 )
 $ErrorActionPreference = "Stop"
 $repo = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
+if ($Server -and $SignUpdate) { throw "Pacotes particulares não entram no feed público de atualização." }
 if (-not $InnoCompilerPath) { $InnoCompilerPath = & (Join-Path $PSScriptRoot "windows\get-inno-setup.ps1") }
 if (-not (Test-Path -LiteralPath $InnoCompilerPath)) { throw "Compilador não encontrado: $InnoCompilerPath" }
 & (Join-Path $PSScriptRoot "publish-app.ps1") -Version $Version -Server $Server
@@ -18,7 +20,14 @@ $stage = Join-Path $output $name
 if ($LASTEXITCODE -ne 0) { throw "Compilação do instalador falhou" }
 $setup = Join-Path $output "$name-Setup.exe"
 if (-not (Test-Path -LiteralPath $setup)) { throw "Instalador ausente: $setup" }
-$checksums = foreach ($file in @($setup, (Join-Path $output "$name.zip"))) {
+$files = @($setup, (Join-Path $output "$name.zip"))
+if ($SignUpdate) {
+    $manifest = Join-Path $output "coconut-update.json"
+    dotnet run --project (Join-Path $repo 'tools\Coconut.Release') -c Release -- sign $Version $setup $manifest (Join-Path $repo 'src\Coconut.Updates\release-public-key.txt')
+    if ($LASTEXITCODE -ne 0) { throw "Assinatura do manifesto de atualização falhou." }
+    $files += $manifest
+}
+$checksums = foreach ($file in $files) {
     "{0}  {1}" -f (Get-FileHash -LiteralPath $file -Algorithm SHA256).Hash.ToLowerInvariant(), (Split-Path $file -Leaf)
 }
 $checksumPath = Join-Path $output "$name-SHA256SUMS.txt"

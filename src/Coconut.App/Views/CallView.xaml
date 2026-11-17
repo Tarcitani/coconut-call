@@ -21,6 +21,7 @@
             </Grid.ColumnDefinitions>
             <StackPanel Spacing="2">
                 <TextBlock Style="{StaticResource SubtitleTextBlockStyle}" Text="{x:Bind ViewModel.ParticipantCountText, Mode=OneWay}" />
+                <TextBlock Text="{x:Bind ViewModel.ConnectionSummary, Mode=OneWay}" TextWrapping="Wrap" Style="{StaticResource CaptionTextBlockStyle}" />
                 <StackPanel Orientation="Horizontal" Spacing="8">
                     <TextBlock
                         VerticalAlignment="Center"
@@ -56,8 +57,10 @@
             CloseButtonCommand="{x:Bind ViewModel.DismissNoticeCommand}"
             Severity="Informational" />
 
-        <!-- Participantes -->
-        <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
+        <!-- A tela ocupa a maior parte da chamada; a lista continua acessível ao lado. -->
+        <Grid Grid.Row="2" ColumnSpacing="12">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="180" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
             <ItemsRepeater ItemsSource="{x:Bind ViewModel.Participants}">
                 <ItemsRepeater.Layout>
                     <UniformGridLayout MinColumnSpacing="12" MinRowSpacing="12" ItemsJustification="Start" />
@@ -69,6 +72,8 @@
                 </ItemsRepeater.ItemTemplate>
             </ItemsRepeater>
         </ScrollViewer>
+        <local:ScreenShareView Grid.Column="1" DataContext="{x:Bind ViewModel.Screen, Mode=OneWay}" />
+        </Grid>
 
         <!-- Controles da chamada -->
         <Border Grid.Row="3" HorizontalAlignment="Center" Style="{StaticResource CardBorderStyle}" Padding="12">

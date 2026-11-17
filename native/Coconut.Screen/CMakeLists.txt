@@ -1,0 +1,8 @@
+cmake_minimum_required(VERSION 3.24)
+project(CoconutScreen LANGUAGES CXX)
+add_library(Coconut.Screen SHARED screen.cpp)
+target_compile_features(Coconut.Screen PRIVATE cxx_std_20)
+target_compile_definitions(Coconut.Screen PRIVATE UNICODE _UNICODE NOMINMAX WIN32_LEAN_AND_MEAN)
+target_compile_options(Coconut.Screen PRIVATE /W4 /EHsc /permissive-)
+target_link_libraries(Coconut.Screen PRIVATE d3d11 dxgi mfplat mf mfuuid wmcodecdspuuid runtimeobject windowsapp ole32)
+set_target_properties(Coconut.Screen PROPERTIES OUTPUT_NAME "Coconut.Screen.Native" RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")

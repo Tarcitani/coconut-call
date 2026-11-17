@@ -1,60 +1,116 @@
 # Arquitetura e distribuição para Windows
 
-## Arquitetura existente
+## Arquitetura
 
 ```mermaid
 flowchart LR
-    UI["Coconut.App · WinUI 3"] --> VM["Coconut.App.Core · ViewModels e serviços"]
-    VM --> Client["Coconut.Client · sinalização, malha e voz"]
-    Client --> Audio["Coconut.Audio · WASAPI, jitter e mixer"]
-    Client --> Native["Coconut.Media.Native · WebRTC, Opus e RTP"]
-    Client <-->|WSS| Server["Coconut.Signaling.Server · ASP.NET Core, WebSocket e STUN"]
-    Server --> Core["Coconut.Signaling.Core · estado síncrono de salas"]
-    Native <-->|"DTLS-SRTP · P2P"| Peer[Outro participante]
+    UI[WinUI 3] --> VM[App.Core · MVVM]
+    VM --> Client[Client · malha, voz, tela]
+    Client --> Audio[Audio · WASAPI]
+    Client --> Screen[Screen · WGC, MF, D3D11]
+    Client --> Native[Media.Native · WebRTC, Opus]
+    Client <-->|WSS| Server[Signaling.Server · WebSocket e STUN]
+    Server --> Core[Signaling.Core · estado síncrono]
+    Native <-->|DTLS-SRTP P2P| Peer[Participantes]
+    UI --> Updates[Updates · Ed25519]
 ```
 
-`Coconut.Signaling.Contracts` define as mensagens compartilhadas. O servidor é a autoridade de admissão e administração; o núcleo não faz E/S. ViewModels e persistência ficam separados da janela WinUI. WASAPI captura/reproduz áudio; o cliente codifica uma vez com Opus e envia a todos os pares admitidos. Nenhum servidor de mídia, TURN ou relay é instalado no PC do usuário. O compartilhamento de tela, a bandeja e a ativação pelo protocolo de convite ainda estão pendentes.
+Contratos compartilhados em `Coconut.Signaling.Contracts`. Servidor é autoridade
+de admissão, administração e transmissor; núcleo sem E/S. Áudio e vídeo são
+codificados uma vez e enviados aos pares admitidos/verificados. Vídeo traz a
+sessão autorizada em cada pacote. Detalhes de captura, limites, handover e retomada
+no [ADR 0006](adr/0006-tela-e-integracao-windows.md). Nenhum servidor de mídia,
+TURN ou relay é instalado no PC.
 
-## Solução de instalação
+## Instalador offline
 
-Um único `Coconut-<versão>-win-x64-Setup.exe`, produzido pelo Inno Setup, contém o payload autocontido que também gera o zip portátil:
+`Coconut-<versão>-win-x64-Setup.exe` (Inno Setup) contém o mesmo payload do zip:
 
 | Componente | Entrega |
 |---|---|
-| .NET 10 | `dotnet publish --self-contained true`, runtime local |
-| Windows App SDK/WinUI 2.6.5 | `WindowsAppSDKSelfContained=true`, DLLs e recursos locais |
-| WebRTC/Opus e dependências transitivas | DLLs compiladas pelo vcpkg, baseline fixado em `native/vcpkg.json` |
-| Visual C++ Runtime | `msvcp140.dll`, `vcruntime140.dll`, `vcruntime140_1.dll` ao lado do executável |
-| Recursos | `Coconut.pri`, views XBF, ícone ICO em nove tamanhos |
-| Licenças e fontes | GPLv3, copyrights dos nativos, avisos e link para a tag correspondente |
+| .NET 10 | Runtime local autocontido |
+| WinUI/Windows App SDK 2.6.5 | DLLs e recursos locais |
+| WebRTC/Opus/transitivas | vcpkg, baseline fixado no manifesto |
+| Tela | `Coconut.Screen.Native.dll`; APIs WGC/MF/D3D11 do Windows |
+| VC++ Runtime | Todo o conjunto CRT redistribuível do toolset, ao lado do exe |
+| Atualização | NSec/libsodium e chave pública Ed25519 |
+| Recursos/licenças | PRI/XBF, ICO em nove tamanhos, GPLv3 e avisos de terceiros |
 
-O usuário não precisa instalar SDK, .NET, Visual Studio, vcpkg ou Inno Setup. O instalador funciona offline; a chamada exige internet e um servidor de sinalização acessível. Windows 11 x64 (build 22000 ou superior) é obrigatório; ARM64 não é distribuído nesta versão.
+Windows 11 x64 (build 22000+); ARM64 não distribuído. Em Windows N, componentes
+de mídia devem estar disponíveis. Não exige SDK, .NET, Visual Studio, vcpkg ou
+Inno no PC do usuário. Instalação offline; chamada exige sinalização acessível.
 
-Instalação por usuário em `%LOCALAPPDATA%\Programs\Coconut`, sem UAC, com menu Iniciar, atalho opcional na área de trabalho e entrada de desinstalação. `AppId` permanece fixo entre versões: executar o instalador novo atualiza a instalação existente. O instalador pede o fechamento do app quando necessário. Preferências e logs ficam separados em `%LOCALAPPDATA%\Coconut` e são preservados ao atualizar/desinstalar. Não registra `coconut://`, pois a ativação ainda não está implementada.
+Instala por usuário em `%LOCALAPPDATA%\Programs\Coconut`, sem UAC; menu Iniciar,
+atalho opcional e desinstalação. AppId fixo permite atualizar preservando
+`%LOCALAPPDATA%\Coconut`. Registra `coconut://` em HKCU com argumento entre aspas.
+Inicialização automática vem desligada; se habilitada pelo app, instalador
+atualiza seu caminho. Desinstalação remove registros somente se ainda forem seus.
+Fechar janela mantém app na bandeja; sair pela bandeja/engrenagem encerra.
 
-O endereço particular do servidor não entra na release pública. Sem `-Server`, a pessoa informa o endereço na tela inicial. Pacotes privados recebem sufixo `-servidor`; nunca anexar esses arquivos a uma release pública. Ao reinstalar, um arquivo de padrões anterior é removido antes de copiar o payload novo para evitar configuração residual.
+Sem `-Server`, pacote público não inclui endereço particular. Pessoa informa
+servidor em Avançado. Pacotes privados usam sufixo `-servidor`; nunca publicar.
+Padrões antigos do diretório do app são removidos na instalação para evitar
+servidor residual. Preferências pessoais separadas são preservadas.
 
-## Reproduzir o pacote
+## Reproduzir
 
-Ambiente de desenvolvimento: Windows x64, SDK do `global.json`, Visual Studio Build Tools com C++/Windows SDK e redistribuíveis do toolset. Para reproduzir os nativos atuais:
+Windows x64, SDK do `global.json`, Build Tools com C++/Windows SDK e componente
+CMake. Build da ponte nativa é integrado ao projeto `Coconut.Screen`; usa CMake
+incluído no Visual Studio. Nativos WebRTC/Opus:
 
 ```powershell
 git clone https://github.com/microsoft/vcpkg C:\Dev\tools\vcpkg
 git -C C:\Dev\tools\vcpkg checkout 8f363bdc11359ede4bc51e5eb32a2617538049c8
 C:\Dev\tools\vcpkg\bootstrap-vcpkg.bat -disableMetrics
 C:\Dev\tools\vcpkg\vcpkg.exe install --x-manifest-root=native --x-install-root=native/vcpkg_installed --triplet x64-windows
-dotnet test Coconut.slnx -c Release
+dotnet build Coconut.slnx -c Release
+dotnet test Coconut.slnx -c Release --no-build
 powershell -NoProfile -ExecutionPolicy Bypass -File deploy\publish-installer.ps1
 ```
 
-`VERSION` é a versão única padrão de todos os projetos e pacotes. `-Version x.y.z` permite gerar um pacote explícito. `publish-installer.ps1` obtém o compilador **Inno Setup 7.1.1** oficial, verifica um SHA-256 fixado antes de executá-lo e o instala em `artifacts/tools`; pode receber `-InnoCompilerPath` para usar um compilador existente. Fontes: [download oficial](https://jrsoftware.org/inno-setup/downloads), [release e digest do compilador](https://github.com/jrsoftware/issrc/releases/tag/is-7_1_1), [instalação sem administrador](https://jrsoftware.org/is6help/topic_setup_privilegesrequired.htm).
+`VERSION` é a versão padrão única. `-Version x.y.z` gera pacote explícito.
+Inno 7.1.1 oficial é obtido com SHA-256 fixado, instalado em `artifacts/tools`;
+`-InnoCompilerPath` permite compilador existente. `publish-app.ps1` verifica
+DLLs/recursos/licenças antes do zip. Saída: `artifacts/app`. Ícone SVG/PNG/ICO
+em `src/Coconut.App/Assets`, gerador WPF em `deploy/windows/build-icon.ps1`.
 
-`publish-app.ps1` verifica arquivos essenciais, recursos WinUI e runtimes antes de comprimir o payload. O instalador usa esse mesmo diretório. A saída em `artifacts/app/` contém Setup, zip e `SHA256SUMS`. O ícone original é `src/Coconut.App/Assets/Coconut.svg` (GPLv3, como o projeto); `deploy/windows/build-icon.ps1` regenera PNG e ICO usando WPF, sem ferramentas gráficas externas.
+## Assinar atualização e publicar
 
-## Publicar
+Manifestos Ed25519 são diferentes de certificado Authenticode. A chave privada
+DPAPI CurrentUser fica em `%LOCALAPPDATA%\Coconut\signing\release-key.dpapi`;
+a pública é versionada em `src/Coconut.Updates/release-public-key.txt`.
+Não regenerar a identidade existente. Não publicar chave privada ou backup.
+Outro mantenedor pode compilar pacote não assinado; ele não será aceito pelo
+atualizador oficial sem migração explícita de confiança.
 
-Validar o instalador localmente, revisar `git diff`, atualizar estado/evidências, fazer commit e enviar a tag `v<versão>`. Publicar apenas os três arquivos públicos como pré-lançamento, junto das notas em `docs/releases/`. O código correspondente fica disponível na tag e nos arquivos de fontes automáticos do GitHub. Não republicar binários sob uma tag existente.
+```powershell
+# Somente primeira criação de identidade, antes de distribuir a chave pública:
+dotnet run --project tools/Coconut.Release -- init src/Coconut.Updates/release-public-key.txt
+# Mantenedor com a identidade existente:
+powershell -NoProfile -ExecutionPolicy Bypass -File deploy/publish-installer.ps1 -SignUpdate
+```
 
-## Limites
+`-SignUpdate` recusa `-Server`, assina `coconut-update.json` e inclui manifesto
+no SHA256SUMS. App verifica feed GitHub (inclui pré-lançamentos), assinatura,
+versão/runtime/validade/URL, tamanho e hash antes de executar, com nova conferência
+sob bloqueio de escrita. Checa ao abrir e a cada seis horas. Aplicação exige clique
+e aguarda fim de chamada/entrada; não interrompe uma chamada para atualizar.
 
-Não há assinatura Authenticode nem atualização automática verificada. SHA-256 ajuda a conferir integridade, mas não substitui assinatura de editor. A atualização desta versão é manual. Assinatura requer um certificado/identidade do mantenedor; não há credencial de assinatura configurada. Um Windows limpo e outra máquina/rede ainda precisam de validação; os testes locais não comprovam áudio entre duas pessoas em redes distintas. Resultados observados estão em [evidências da versão 0.2.0](benchmarks/2026-11-16-instalador-windows.md).
+Validar pacote, revisar diff, atualizar evidências, commit e tag `v<versão>`.
+Publicar quatro assets públicos: Setup, zip, SHA256SUMS e `coconut-update.json`,
+com notas em `docs/releases`. Fontes correspondentes ficam na tag do GitHub.
+Nunca substituir binários de tag existente. Publicação exige autorização.
+
+## QA isolada e limites
+
+`COCONUT_PROFILE_DIRECTORY` aceita diretório absoluto local para perfis de teste;
+separa preferências, logs, broker e cache de atualização. O padrão continua um
+perfil por usuário. Não mudar inicialização do Windows com perfis de QA.
+`tools/Coconut.Release verify-apply <manifesto> <setup> <baseline> installed`
+verifica assinatura/hash e atualiza a instalação registrada se a baseline confere.
+Exige todos os processos Coconut fechados. Não usar diretório alternativo do mesmo
+AppId sobre uma instalação real: isso redirecionaria seu registro de desinstalação.
+
+Não há Authenticode, portanto SmartScreen pode avisar. Windows limpo, outra GPU,
+redes distintas e estabilidade prolongada não estão validados. Evidências:
+[MVP 0.3](benchmarks/2026-11-17-mvp.md), [instalador 0.2](benchmarks/2026-11-16-instalador-windows.md).

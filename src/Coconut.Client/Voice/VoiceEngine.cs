@@ -132,6 +132,16 @@ public sealed class VoiceEngine : IAsyncDisposable
                 CaptureInfo = null;
                 (_capture, CaptureInfo) = await OpenOrFallback(
                     options, o => AudioCapture.StartAsync(_catalog, o, _transmitter.OnCapturedFrame), id => SelectedCaptureId = id);
+                var activeCapture = _capture;
+                _capture.ProcessingProblem += message => { if (ReferenceEquals(_capture, activeCapture)) { Problem?.Invoke(message); } };
+                _capture.EffectsChanged += effects =>
+                {
+                    if (ReferenceEquals(_capture, activeCapture) && CaptureInfo is { } info)
+                    {
+                        CaptureInfo = info with { Effects = effects };
+                        Diagnostic?.Invoke("efeitos do microfone atualizados; IA " + (effects.Any(e => e.Id == AudioEffectPolicy.AiNoiseSuppression && e.IsOn) ? "ligada" : "desligada"));
+                    }
+                };
                 _capture.Faulted += fault =>
                 {
                     Diagnostic?.Invoke($"microfone falhou em execução: {fault.GetType().Name} 0x{fault.HResult:X8}");

@@ -7,11 +7,30 @@ Cada protótipo define hipótese, procedimento e critério **antes** da execuç�
 | P1 | R1 | libdatachannel compilada via vcpkg é chamável por P/Invoke do .NET 10 e estabelece DTLS-SRTP P2P sem TURN | `native/vcpkg.json` → `datachannel.dll`; console .NET com 2 peers em processos distintos, SDP trocado por arquivo/pipe; canal de dados com eco; trilha Opus com quadros sintéticos | Estado `connected` nos dois lados; eco ida-e-volta; quadros Opus recebidos com timestamps monotônicos; nenhum `iceServers` configurado | **Sucesso local** (9/9 execuções) — [evidência](../benchmarks/2026-11-16-P1-webrtc-local.md) |
 | P2 | R1/R2 | Malha local de N processos (N=3, 5, 8, 15) negocia com o protocolo de admissão | Host de sinalização local + N clientes console | Todos admitidos; tempo de admissão por N; CPU/RAM por processo | **Sucesso local** (N=15: 40/40) — [evidência](../benchmarks/2026-11-16-P2-malha-local.md) |
 | P3 | R3 | WASAPI *Communications* entrega AEC sem supressão de ruído forçada | Captura com e sem categoria; reprodução de sinal de referência; inspeção de efeitos ativos | Eco atenuado audivelmente e medido; lista de efeitos ativos registrada | **Parcial**: efeitos e AEC confirmados; IA desligada ([evidência](../benchmarks/2026-11-16-P3-audio-local.md)); eco audível pendente (precisa de pessoas) |
-| P4 | R4 | WGC → MF H.264 (hardware) → decode MF → `SwapChainPanel` sustenta 1080p30 com CPU baixa | Protótipo WinUI isolado, loopback local sem rede | Latência captura→tela, CPU, GPU, fps em 720p/1080p × 15/30/60 | Pendente |
-| P5 | R7 | WinUI 3 não empacotado (WinAppSDK 2.x) suporta bandeja, instância única e ativação `coconut://` redirecionada | App mínimo; segunda instância via link | Link com app aberto chega à instância existente; fechar janela mantém processo na bandeja | Pendente |
-| P6 | R2 | Codificar uma vez e enviar para 14 trilhas mantém CPU estável; uplink calculado confere com o medido | Transmissor + 14 receptores locais | Uplink medido por par e total; CPU do transmissor | Depende de P1, P4 |
-| P7 | R6 | Velopack + manifesto Ed25519 rejeita pacote adulterado | Feed local com pacote íntegro e adulterado | Adulterado rejeitado antes de executar; íntegro aplicado; chamada ativa não interrompida | Pendente |
+| P4 | R4 | WGC → MF H.264 (hardware) → decode MF → `SwapChainPanel` sustenta 1080p30 com CPU baixa | Protótipo WinUI isolado, loopback local sem rede | Latência captura→tela, CPU, GPU, fps em 720p/1080p × 15/30/60 | **Parcial local**: dois monitores, hardware/software e GPU; matriz completa/latência/CPU pendentes ([MVP](../benchmarks/2026-11-17-mvp.md)) |
+| P5 | R7 | WinUI 3 não empacotado (WinAppSDK 2.x) suporta bandeja, instância única e ativação `coconut://` redirecionada | App mínimo; segunda instância via link | Link com app aberto chega à instância existente; fechar janela mantém processo na bandeja | Implementado; broker real e convite na instância observados; evidências no MVP |
+| P6 | R2 | Codificar uma vez e enviar para 14 trilhas mantém CPU estável; uplink calculado confere com o medido | Transmissor + 14 receptores locais | Uplink medido por par e total; CPU do transmissor | **Parcial local**: 15 peers, 278 quadros nos 14 decodificadores GPU e Opus simultâneo; CPU/uplink externo pendentes |
+| P7 | R6 | Inno Setup + manifesto Ed25519 (ADR 0006) rejeita pacote adulterado | Feed local com pacote íntegro e adulterado | Adulterado rejeitado antes de executar; íntegro aplicado; chamada ativa não interrompida | Implementado e 12 testes de verificação; aplicação real registrada no MVP |
 
-## Benchmarks reprodutíveis (a implementar)
+## Matriz de benchmarks ainda não concluída
 
 Inicialização a frio · repouso na bandeja · chamada 1:1 · grupo (3/5/8/15) · tela 720p/1080p × 15/30/60 fps com e sem hardware · uplink por participante · latência boca-ouvido e captura-tela · perda e reconexão (simuladas com atraso/perda injetados) · estabilidade prolongada (≥ 2 h) com amostragem de memória.
+
+## Reproduzir tela, entrada tardia e retomada
+
+```powershell
+dotnet build prototypes/P4.ScreenProbe -c Release
+# Publicar/rodar sinalização em loopback separadamente, porta 5080:
+dotnet run --project src/Coconut.Signaling.Server --urls http://127.0.0.1:5080
+# Em outro terminal; monitor por índice (0, 1...), sem gravar a tela:
+dotnet run --project prototypes/P4.ScreenProbe -c Release --no-build -- 1
+dotnet run --project prototypes/P4.ScreenProbe -c Release --no-build -- 1 --software
+dotnet run --project prototypes/P4.ScreenProbe -c Release --no-build -- --network 15
+dotnet run --project prototypes/P4.ScreenProbe -c Release --no-build -- --network 2 --reconnect
+dotnet run --project prototypes/P4.ScreenProbe -c Release --no-build -- --network 3 --latejoin
+```
+
+Os ensaios de rede usam peers reais no mesmo PC, captura física, decode GPU e
+pacotes Opus sintéticos. Não são 15 computadores, avaliação perceptual de voz ou
+benchmark de internet. `--reconnect` aborta somente WebSocket e exige retomada
+com mesma identidade. `--latejoin` admite o último peer após começar o vídeo.

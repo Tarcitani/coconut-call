@@ -1,77 +1,59 @@
-COCONUT - chamadas de voz ponto a ponto (versão de teste)
-=========================================================
+﻿COCONUT 0.3 - voz e tela ponto a ponto (MVP em teste)
+===================================================
 
-O Coconut é um app de chamada de voz para Windows 11. O áudio vai direto de um
-computador para o outro (P2P, criptografado); o servidor só apresenta os
-participantes e nunca recebe o áudio.
+INSTALAR
+Execute Coconut-<versão>-win-x64-Setup.exe. Windows 11 x64 é obrigatório.
+.NET, WinUI, Visual C++ e bibliotecas nativas incluídos; a instalação funciona
+offline, por usuário, sem administrador. Em Windows N, os componentes de mídia
+do Windows precisam estar disponíveis para compartilhar a tela.
+O instalador não tem certificado de editor Authenticode: o SmartScreen pode
+avisar. Baixe da release oficial e confira SHA256SUMS.txt com Get-FileHash.
 
-SERVIDOR
-Se você recebeu um pacote particular, o servidor pode vir configurado.
-Se baixou do GitHub, peça o endereço do servidor (começa com wss://) a quem
-vai te chamar e informe em "Avançado" > "Servidor de sinalização", na tela
-inicial. Todos na mesma sala precisam usar o mesmo servidor.
+O zip é portátil: extraia inteiro e abra Coconut.exe. Não execute dentro do zip.
 
-REQUISITOS
-- Windows 11, 64 bits. Não precisa instalar .NET nem nenhum outro programa.
-- Microfone. Fone de ouvido é recomendado (evita eco e microfonia).
+SERVIDOR E SALAS
+O pacote público não inclui endereço particular de servidor. Peça o endereço
+wss://…/ws a quem hospeda e informe em Avançado > Servidor de sinalização.
+Todos precisam usar o mesmo servidor. Digite o nome para criar uma sala ou
+entrar por código. O link coconut://join/… abre a instância existente e
+preenche o convite; é preciso clicar em Entrar. Receber um link durante uma
+chamada não muda de sala.
 
-COMO INSTALAR E ABRIR
-1. Baixe o arquivo Coconut-<versão>-win-x64-Setup.exe nos lançamentos do GitHub
-   e execute o instalador. Ele inclui .NET, Windows App SDK, runtime do Visual
-   C++ e as bibliotecas de áudio/rede; não precisa baixar dependências.
-2. Abra "Coconut" pelo menu Iniciar. A instalação é só para o seu usuário,
-   em %LOCALAPPDATA%\Programs\Coconut, sem exigir administrador.
-3. O instalador e o app ainda não têm assinatura digital; o SmartScreen pode
-   mostrar um aviso. Confira se o arquivo veio da release oficial e compare
-   o SHA-256 com o arquivo SHA256SUMS antes de decidir executá-lo.
-4. Se o Firewall do Windows perguntar, permita o app nas redes de sua escolha. Sem isso a
-   conexão direta entre vocês pode falhar.
+VOZ E TELA
+Use fones de ouvido para evitar microfonia. Há mudo e seleção de dispositivos.
+O administrador pode remover participantes e encerrar a sala.
+Em Compartilhar tela, escolha um monitor inteiro, resolução, FPS e bitrate.
+Tudo nesse monitor fica visível para a sala, inclusive notificações.
+Há um transmissor por vez: outra pessoa pede troca e o transmissor atual
+aceita ou recusa. O pedido também pode ser cancelado ou expirar.
+H.264 usa hardware quando disponível; há alternativa por software.
+A qualidade pode diminuir ou o vídeo parar para preservar a conexão da voz.
+O bitrate é POR RECEPTOR: com 14 receptores, 2 Mbps requer até 28 Mbps de upload.
+Não há captura do som do sistema. O áudio do microfone continua separado.
 
-ALTERNATIVA PORTÁTIL
-Extraia o zip inteiro para uma pasta e abra Coconut.exe dessa pasta.
-Não execute o aplicativo de dentro do zip. Não é necessário usar o instalador.
+BANDEJA, ATUALIZAÇÃO E DIAGNÓSTICO
+Fechar a janela mantém app e chamada na bandeja. Seu menu abre, silencia ou
+encerra. Na engrenagem, inicialização com Windows é opcional e desligada por
+padrão; quando habilitada, o app inicia na bandeja.
+A partir da 0.3, verifica atualizações ao abrir e a cada 6 horas, baixa o
+instalador e verifica manifesto Ed25519, tamanho e SHA-256 antes de executá-lo.
+Clique para instalar depois de sair da chamada. Ed25519 protege a atualização;
+não é certificado Authenticode e não elimina os avisos do Windows.
+Atualização manual: feche o app e execute o instalador novo.
+Preferências e logs em %LOCALAPPDATA%\Coconut são preservados ao atualizar ou
+desinstalar pelo Windows. O zip deve ser extraído numa pasta nova.
+Exporte diagnóstico pela engrenagem. O ZIP contém somente logs sanitizados,
+sem preferências, chaves ou mídia. Você decide com quem compartilhar.
 
-ATUALIZAR E DESINSTALAR
-- Para atualizar, feche o Coconut e execute o instalador da versão nova.
-  Ele substitui os arquivos do app e preserva suas configurações e logs.
-- Para remover, use Configurações > Aplicativos > Aplicativos instalados >
-  Coconut > Desinstalar. Seus dados em %LOCALAPPDATA%\Coconut são preservados;
-  você pode apagar essa pasta depois, se quiser remover também os dados.
-- Se usar o zip portátil, extraia cada versão numa pasta nova.
-- Não há atualização automática nesta versão.
-
-COMO USAR
-- Criar uma sala: digite seu nome e clique em "Criar sala". Na tela da
-  chamada, copie o convite e mande para quem vai entrar (WhatsApp etc.).
-- Entrar numa sala: digite seu nome, cole o convite no campo
-  "Código ou link do convite" e clique em "Entrar".
-  (Clicar no link coconut://... ainda não abre o app: cole no campo.)
-- Na chamada: botão de mudo, troca de microfone e saída de áudio, e "Sair".
-  Quem criou a sala pode remover participantes e encerrar para todos.
-
-PRIVACIDADE (leia)
-- Numa chamada P2P, cada participante recebe o endereço IP dos outros: é assim
-  que a conexão direta funciona. Entre só em salas com pessoas que você conhece.
-- O servidor não recebe nem grava áudio, e não registra endereços IP.
-  O app não grava as chamadas.
-
-SE ALGO DER ERRADO (por exemplo, vocês não se ouvem)
-- Avisos de microfone ou saída de áudio aparecem na própria tela da chamada.
-- O app guarda um registro técnico só no seu computador, por 7 dias. Para
-  abrir a pasta, cole isto na barra de endereço do Explorador de Arquivos:
-      %LOCALAPPDATA%\Coconut\logs
-  O registro não contém áudio, endereços IP nem convites. Mande o arquivo do
-  dia (coconut-AAAAMMDD.log) para quem te chamou: ele mostra onde o áudio parou.
-
-LIMITAÇÕES DESTA VERSÃO DE TESTE
-- Só voz: compartilhamento de tela ainda não existe.
-- Não há servidor de retransmissão (por decisão de projeto). Em algumas redes
-  (4G/5G, redes de empresa ou faculdade) a conexão direta pode não acontecer e
-  a chamada não conecta. Se isso ocorrer, anote o tipo de rede de cada um:
-  essa informação é justamente o que este teste quer descobrir.
-- Configurações e logs ficam em %LOCALAPPDATA%\Coconut.
+PRIVACIDADE E LIMITES
+Áudio e vídeo são criptografados e seguem diretamente entre participantes.
+Cada participante recebe o IP dos demais; entre em salas de confiança.
+O servidor não recebe mídia e o app não grava chamadas ou telas.
+Sem TURN ou relay: certas redes corporativas e móveis impedem conexão direta.
+Testado localmente; Windows limpo, redes distintas e uso prolongado ainda
+precisam de validação. Falhas de áudio e conexão aparecem na chamada.
 
 LICENÇA E CÓDIGO-FONTE
-Software livre sob a GNU GPL versão 3 (veja LICENCA.txt).
-Código-fonte: https://github.com/Tarcitani/coconut-call
-Componentes de terceiros e suas licenças: pasta "licencas-terceiros".
+GNU GPL versão 3 (LICENCA.txt).
+https://github.com/Tarcitani/coconut-call
+Licenças de terceiros: pasta licencas-terceiros.

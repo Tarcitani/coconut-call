@@ -85,6 +85,8 @@ internal sealed class PeerLink(ParticipantId remote, NegotiationRole role, RtcPe
         VerifiedAfter = Stopwatch.GetElapsedTime(_createdAt);
     }
 
+    public void MarkUnverified() { Verified = false; Reported = false; }
+
     public void Dispose() => Peer.Dispose();
 
     /// <summary>Descrição do candidato sem endereço: tipo, transporte e mid.</summary>

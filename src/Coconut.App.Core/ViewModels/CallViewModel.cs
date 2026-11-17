@@ -19,6 +19,7 @@ public sealed partial class CallViewModel : ObservableObject, IAsyncDisposable
     private readonly IDisposable _levelTimer;
     private bool _ended;
     private bool _syncingDevices;
+    private int _levelTicks;
 
     public CallViewModel(ICallBackend backend, IUiDispatcher ui, IClipboard clipboard, Action<CallViewModel, string> onEnded)
     {
@@ -26,6 +27,7 @@ public sealed partial class CallViewModel : ObservableObject, IAsyncDisposable
         _ui = ui;
         _clipboard = clipboard;
         _onEnded = onEnded;
+        if (backend.ScreenSharing is { } screen) { Screen = new ScreenShareViewModel(screen, ui, () => backend.You, id => backend.Roster.FirstOrDefault(p => p.Id == id)?.DisplayName ?? "Participante"); }
         InviteCode = backend.InviteCode ?? string.Empty;
         IsMuted = backend.IsMuted;
 
@@ -39,6 +41,11 @@ public sealed partial class CallViewModel : ObservableObject, IAsyncDisposable
     }
 
     public string InviteCode { get; }
+
+    public ScreenShareViewModel? Screen { get; }
+
+    [ObservableProperty]
+    public partial string ConnectionSummary { get; private set; } = string.Empty;
 
     public string InviteDisplay => Signaling.Contracts.InviteCode.Format(InviteCode);
 
@@ -72,6 +79,7 @@ public sealed partial class CallViewModel : ObservableObject, IAsyncDisposable
     public async ValueTask DisposeAsync()
     {
         _levelTimer.Dispose();
+        Screen?.Dispose();
         _backend.Changed -= OnBackendChanged;
         _backend.Problem -= OnBackendProblem;
         _backend.Ended -= OnBackendEnded;
@@ -84,23 +92,32 @@ public sealed partial class CallViewModel : ObservableObject, IAsyncDisposable
     [RelayCommand]
     private void CopyInvite()
     {
-        _clipboard.SetText(Signaling.Contracts.InviteCode.ToLink(InviteCode));
-        Notice = "Link do convite copiado.";
+        try { _clipboard.SetText(Signaling.Contracts.InviteCode.ToLink(InviteCode)); Notice = "Link do convite copiado."; }
+        catch (System.Runtime.InteropServices.ExternalException) { Notice = "A área de transferência está ocupada. Tente copiar novamente."; }
     }
 
     [RelayCommand]
     private async Task LeaveAsync()
     {
-        await _backend.LeaveAsync();
-        End("left");
+        try { await _backend.LeaveAsync(); }
+        catch (Exception ex) when (ex is System.Net.WebSockets.WebSocketException or OperationCanceledException or InvalidOperationException) { }
+        finally { End("left"); }
     }
 
     [RelayCommand(CanExecute = nameof(IsAdmin))]
-    private Task EndForAllAsync() => _backend.EndRoomForAllAsync();
+    private async Task EndForAllAsync()
+    {
+        try { await _backend.EndRoomForAllAsync(); }
+        catch (Exception ex) when (ex is System.Net.WebSockets.WebSocketException or InvalidOperationException or OperationCanceledException) { Notice = "O servidor está indisponível. Tente encerrar para todos após reconectar."; }
+    }
 
     [RelayCommand]
-    private Task KickAsync(ParticipantViewModel participant) =>
-        participant.CanBeKicked ? _backend.KickAsync(participant.Id) : Task.CompletedTask;
+    private async Task KickAsync(ParticipantViewModel participant)
+    {
+        if (!participant.CanBeKicked) { return; }
+        try { await _backend.KickAsync(participant.Id); }
+        catch (Exception ex) when (ex is System.Net.WebSockets.WebSocketException or InvalidOperationException or OperationCanceledException) { Notice = "O servidor está indisponível. Tente remover o participante após reconectar."; }
+    }
 
     [RelayCommand]
     private void DismissNotice() => Notice = null;
@@ -215,6 +232,12 @@ public sealed partial class CallViewModel : ObservableObject, IAsyncDisposable
 
     private void UpdateLevels()
     {
+        if (_levelTicks++ % 10 == 0)
+        {
+            ConnectionSummary = _backend.ConnectionSummary;
+            var connections = _backend.PeerConnectionStates;
+            foreach (var peer in Participants) { peer.ConnectionText = peer.IsYou ? IsMuted ? "Microfone silenciado" : "Seu áudio" : connections.GetValueOrDefault(peer.Id, string.Empty); }
+        }
         MicrophoneLevel = IsMuted ? 0 : _backend.MicrophoneLevel;
         var levels = _backend.SpeakingLevels;
         foreach (var participant in Participants)

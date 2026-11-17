@@ -22,6 +22,10 @@ public enum JoinOutcome
 /// </summary>
 public interface ICallBackend : IAsyncDisposable
 {
+    Coconut.Client.Screen.IScreenSharing? ScreenSharing => null;
+    string ConnectionSummary => "Sinalização conectada.";
+    IReadOnlyDictionary<ParticipantId, string> PeerConnectionStates => new Dictionary<ParticipantId, string>();
+    string? AdmissionFailureDescription => null;
     /// <summary>Composição, administrador ou estado mudaram.</summary>
     event Action? Changed;
 

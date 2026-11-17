@@ -8,13 +8,14 @@
     <Border
         x:Name="Card"
         Width="168"
-        Height="148"
+        Height="170"
         Style="{StaticResource CardBorderStyle}"
         BorderThickness="2"
         BorderBrush="{x:Bind local:ParticipantItem.SpeakingBrush(Participant.IsSpeaking), Mode=OneWay}">
         <Grid RowSpacing="6">
             <Grid.RowDefinitions>
                 <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
@@ -47,6 +48,7 @@
                     <FontIcon FontSize="12" Glyph="&#xE711;" />
                 </Button>
             </Grid>
+            <TextBlock Grid.Row="3" Text="{x:Bind Participant.ConnectionText, Mode=OneWay}" TextAlignment="Center" TextWrapping="Wrap" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
         </Grid>
     </Border>
 </UserControl>

@@ -30,6 +30,7 @@ public sealed partial class MeshSession
     /// <summary>O par saiu ou foi descartado: enlace fechado e nunca recriado.</summary>
     private void Depart(ParticipantId remote)
     {
+        _screenFeedbackTimes.TryRemove(remote, out _);
         _departed.Add(remote);
         _expected.Remove(remote);
         RemoveLink(remote);
@@ -52,10 +53,10 @@ public sealed partial class MeshSession
             }
 
             link.DescriptionsSent++;
-            return _signaling.SendAsync(new Relay(remote, type == "offer" ? RelayKind.Offer : RelayKind.Answer, sdp));
+            return SendSignalingAsync(new Relay(remote, type == "offer" ? RelayKind.Offer : RelayKind.Answer, sdp));
         });
         rtc.LocalCandidateReady += (candidate, mid) => Post(() => IsCurrent(link)
-            ? _signaling.SendAsync(new Relay(remote, RelayKind.Candidate, (mid ?? string.Empty) + "\n" + candidate))
+            ? SendSignalingAsync(new Relay(remote, RelayKind.Candidate, (mid ?? string.Empty) + "\n" + candidate))
             : Task.CompletedTask);
         rtc.StateChanged += state => Post(() => OnStateAsync(link, state));
         rtc.DataChannelOpened += () => Post(() =>
@@ -68,11 +69,13 @@ public sealed partial class MeshSession
             return Task.CompletedTask;
         });
         rtc.DataMessageReceived += text => Post(() => OnDataAsync(link, text));
-        rtc.AudioPacketReceived += packet => AudioReceived?.Invoke(remote, packet);
+        rtc.AudioPacketReceived += packet => { if (_audioTargets.Any(p => ReferenceEquals(p.Peer, rtc))) { AudioReceived?.Invoke(remote, packet); } };
+        rtc.VideoPacketReceived += packet => OnVideoPacket(remote, packet);
         rtc.CallbackFaulted += ex => Diagnostic?.Invoke($"callback nativo: {ex.Message}");
 
         // A trilha precisa existir antes de qualquer descrição para casar pelo mid nos dois lados.
         rtc.AddAudioTrack((uint)Random.Shared.NextInt64(1, uint.MaxValue), "coconut");
+        rtc.AddVideoTrack(_screenSsrc);
         if (role == NegotiationRole.Offerer)
         {
             rtc.CreateDataChannel("coconut");
@@ -89,7 +92,7 @@ public sealed partial class MeshSession
         }
 
         // Nova oferta para um enlace que já negociou = o ofertante renegociou após queda: recomeça do zero.
-        if (relay.Kind == RelayKind.Offer && link.RemoteDescriptionSet && !link.Verified)
+        if (relay.Kind == RelayKind.Offer && link.RemoteDescriptionSet && link.Role == NegotiationRole.Answerer)
         {
             Diagnostic?.Invoke($"renegociação recebida (tentativa anterior {link.Attempt}: {link.Timeline})");
             RemoveLink(relay.From);
@@ -129,18 +132,25 @@ public sealed partial class MeshSession
 
     private async Task OnStateAsync(PeerLink link, RtcState state)
     {
-        if (!IsCurrent(link))
+        if (_disposing || !IsCurrent(link))
         {
             return;
         }
 
         link.RecordState(state);
-        if (link.Verified || state is not (RtcState.Disconnected or RtcState.Failed or RtcState.Closed))
+        if (state == RtcState.Connected && !link.Verified && link.Peer.IsDataChannelOpen) { link.Peer.SendText(ProbePrefix + link.Nonce); }
+        if (state is not (RtcState.Disconnected or RtcState.Failed or RtcState.Closed))
         {
             return;
         }
+        var wasVerified = link.Verified;
+        if (wasVerified)
+        {
+            link.MarkUnverified(); RebuildAudioTargets();
+            if (IsSignalingConnected) { await SendSignalingAsync(new ReportLink(link.Remote, LinkStatus.Failed)); }
+        }
 
-        Diagnostic?.Invoke($"enlace caiu antes de verificar (papel {link.Role}, tentativa {link.Attempt}, " +
+        Diagnostic?.Invoke($"enlace {(wasVerified ? "verificado interrompido" : "caiu antes de verificar")} (papel {link.Role}, tentativa {link.Attempt}, " +
             $"descrições env/rec {link.DescriptionsSent}/{link.DescriptionsReceived}, candidatos aplicados {link.CandidatesApplied}, estados {link.Timeline})");
 
         if (link.Role != NegotiationRole.Offerer)
@@ -148,16 +158,17 @@ public sealed partial class MeshSession
             return; // o respondente aguarda a renegociação do ofertante
         }
 
-        RemoveLink(link.Remote);
-        if (link.Attempt < MaxAttempts)
+        if (!IsSignalingConnected) { return; }
+        if (wasVerified || link.Attempt < MaxAttempts)
         {
             var remote = link.Remote;
-            var next = link.Attempt + 1;
-            _ = Task.Delay(TimeSpan.FromMilliseconds(100 * link.Attempt)).ContinueWith(
+            var next = wasVerified ? 1 : link.Attempt + 1;
+            _ = Task.Delay(state == RtcState.Disconnected ? TimeSpan.FromSeconds(2) : TimeSpan.FromMilliseconds(100 * link.Attempt), _lifetime.Token).ContinueWith(
                 _ => Post(() =>
                 {
-                    if (_expected.ContainsKey(remote) && !_links.ContainsKey(remote))
+                    if (!_disposing && IsSignalingConnected && _expected.ContainsKey(remote) && IsCurrent(link) && !link.Verified)
                     {
+                        RemoveLink(remote);
                         CreateLink(remote, NegotiationRole.Offerer, next);
                     }
 
@@ -167,7 +178,8 @@ public sealed partial class MeshSession
         }
         else
         {
-            await _signaling.SendAsync(new ReportLink(link.Remote, LinkStatus.Failed));
+            RemoveLink(link.Remote);
+            await SendSignalingAsync(new ReportLink(link.Remote, LinkStatus.Failed));
         }
     }
 
@@ -182,7 +194,7 @@ public sealed partial class MeshSession
         {
             link.Peer.SendText(ProbeAckPrefix + text[ProbePrefix.Length..]);
         }
-        else if (text == ProbeAckPrefix + link.Nonce && !link.Verified)
+        else if (text == ProbeAckPrefix + link.Nonce && !link.Verified && link.Peer.State == RtcState.Connected)
         {
             link.MarkVerified();
             link.Reported = true;
@@ -193,7 +205,7 @@ public sealed partial class MeshSession
             }
 
             LinkVerified?.Invoke(link.Remote, link.VerifiedAfter!.Value);
-            await _signaling.SendAsync(new ReportLink(link.Remote, LinkStatus.Verified));
+            if (IsSignalingConnected) { await SendSignalingAsync(new ReportLink(link.Remote, LinkStatus.Verified)); }
         }
     }
 
@@ -206,5 +218,5 @@ public sealed partial class MeshSession
         }
     }
 
-    private void RebuildAudioTargets() => _audioTargets = [.. _links.Values.Where(l => l.Verified)];
+    private void RebuildAudioTargets() => _audioTargets = [.. _links.Values.Where(l => l.Verified && Roster.Any(p => p.Id == l.Remote))];
 }

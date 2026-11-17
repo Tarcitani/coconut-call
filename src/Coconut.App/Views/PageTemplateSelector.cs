@@ -29,6 +29,7 @@ public static class Bind
     public static bool Not(bool value) => !value;
 
     public static Visibility VisibleIf(bool value) => value ? Visibility.Visible : Visibility.Collapsed;
+    public static Visibility VisibleUnless(bool value) => value ? Visibility.Collapsed : Visibility.Visible;
 
     /// <summary>Nível RMS → 0..100 para barras (escala aproximada de voz).</summary>
     public static double LevelPercent(double rms) => Math.Clamp(rms / 30.0, 0, 100);

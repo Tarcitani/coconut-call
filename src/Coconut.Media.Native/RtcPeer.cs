@@ -36,6 +36,7 @@ public sealed unsafe class RtcPeer : IDisposable
     private readonly nint _key = (nint)Interlocked.Increment(ref s_nextKey);
     private volatile int _dataChannel = -1;
     private volatile int _audioTrack = -1;
+    private volatile int _videoTrack = -1;
     private int _disposed;
 
     public RtcPeer(RtcPeerOptions options)
@@ -98,6 +99,10 @@ public sealed unsafe class RtcPeer : IDisposable
 
     public event RtpPacketHandler? AudioPacketReceived;
 
+    public event RtpPacketHandler? VideoPacketReceived;
+
+    public bool IsVideoOpen => _videoTrack >= 0 && RtcNative.IsOpen(_videoTrack);
+
     /// <summary>Exceção lançada por um assinante dentro de um callback nativo (não pode atravessar a fronteira).</summary>
     public event Action<Exception>? CallbackFaulted;
 
@@ -147,6 +152,30 @@ public sealed unsafe class RtcPeer : IDisposable
             Marshal.FreeCoTaskMem(mid);
             Marshal.FreeCoTaskMem(name);
         }
+    }
+
+    /// <summary>Raw RTP/RTCP track. Managed RFC 6184 packetization includes the authorized session extension.</summary>
+    public void AddVideoTrack(uint ssrc)
+    {
+        var mid = Marshal.StringToCoTaskMemUTF8("screen");
+        var profile = Marshal.StringToCoTaskMemUTF8("42e02a");
+        try
+        {
+            var init = new RtcTrackInit { Direction = RtcDirection.SendRecv, Codec = RtcCodec.H264,
+                PayloadType = 96, Ssrc = ssrc, Mid = (byte*)mid, Msid = (byte*)mid, TrackId = (byte*)mid, Profile = (byte*)profile };
+            var track = RtcNative.AddTrackEx(_pc, &init); RtcNative.Check(track, "rtcAddTrackEx(video)");
+            RtcNative.SetUserPointer(track, (void*)_key);
+            RtcNative.Check(RtcNative.SetMessageCallback(track, &OnVideoMessage), "rtcSetMessageCallback(video)");
+            _videoTrack = track;
+        }
+        finally { Marshal.FreeCoTaskMem(mid); Marshal.FreeCoTaskMem(profile); }
+    }
+
+    public bool SendVideoPacket(ReadOnlySpan<byte> packet)
+    {
+        var track = _videoTrack;
+        if (track < 0 || !RtcNative.IsOpen(track) || RtcNative.GetBufferedAmount(track) > 256 * 1024) { return false; }
+        fixed (byte* data = packet) { return RtcNative.SendMessage(track, data, packet.Length) >= 0; }
     }
 
     /// <summary>Só o ofertante cria o canal; o respondente o recebe da negociação.</summary>
@@ -229,6 +258,8 @@ public sealed unsafe class RtcPeer : IDisposable
         {
             _ = RtcNative.Delete(_audioTrack);
         }
+
+        if (_videoTrack >= 0) { _ = RtcNative.Delete(_videoTrack); }
 
         _ = RtcNative.DeletePeerConnection(_pc);
     }
@@ -336,5 +367,15 @@ public sealed unsafe class RtcPeer : IDisposable
         {
             peer.CallbackFaulted?.Invoke(ex);
         }
+    }
+
+    [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
+    private static void OnVideoMessage(int id, byte* message, int size, void* ptr)
+    {
+        if (size <= 0 || !s_live.TryGetValue((nint)ptr, out var peer)) { return; }
+        try { peer.VideoPacketReceived?.Invoke(new ReadOnlySpan<byte>(message, size)); }
+#pragma warning disable CA1031 // Native callbacks must never unwind into C++.
+        catch (Exception ex) { peer.CallbackFaulted?.Invoke(ex); }
+#pragma warning restore CA1031
     }
 }

@@ -19,7 +19,7 @@ public sealed partial class MeshSession : IAsyncDisposable
 
     private readonly Channel<Func<Task>> _loop = Channel.CreateUnbounded<Func<Task>>(new UnboundedChannelOptions { SingleReader = true });
     private readonly Dictionary<ParticipantId, PeerLink> _links = [];
-    private readonly SignalingConnection _signaling = new();
+    private SignalingConnection _signaling = new();
     private readonly RtcPeerOptions _rtcOptions;
     private readonly Task _loopTask;
     private volatile PeerLink[] _audioTargets = [];
@@ -27,12 +27,7 @@ public sealed partial class MeshSession : IAsyncDisposable
     public MeshSession(RtcPeerOptions rtcOptions)
     {
         _rtcOptions = rtcOptions;
-        _signaling.MessageReceived += message => Post(() => HandleAsync(message));
-        _signaling.Closed += _ => Post(() =>
-        {
-            Ended?.Invoke("signaling-closed");
-            return Task.CompletedTask;
-        });
+        AttachSignaling(_signaling);
         _loopTask = Task.Run(RunLoopAsync);
     }
 
@@ -78,12 +73,14 @@ public sealed partial class MeshSession : IAsyncDisposable
 
     public async Task CreateRoomAsync(Uri server, string displayName, CancellationToken cancellation)
     {
+        _server = server;
         await _signaling.ConnectAsync(server, cancellation);
         await _signaling.SendAsync(new CreateRoom(displayName));
     }
 
     public async Task JoinRoomAsync(Uri server, string inviteCode, string displayName, CancellationToken cancellation)
     {
+        _server = server;
         await _signaling.ConnectAsync(server, cancellation);
         await _signaling.SendAsync(new JoinRoom(inviteCode, displayName));
     }
@@ -103,15 +100,18 @@ public sealed partial class MeshSession : IAsyncDisposable
         return sent;
     }
 
-    public Task LeaveAsync() => _signaling.SendAsync(new LeaveRoom());
+    public Task LeaveAsync() { _terminal = true; return SendSignalingAsync(new LeaveRoom()); }
 
     /// <summary>Só o administrador; o servidor valida e recusa os demais.</summary>
-    public Task KickAsync(ParticipantId target) => _signaling.SendAsync(new KickParticipant(target));
+    public Task KickAsync(ParticipantId target) => SendSignalingAsync(new KickParticipant(target));
 
-    public Task EndRoomForAllAsync() => _signaling.SendAsync(new EndRoomForAll());
+    public Task EndRoomForAllAsync() => SendSignalingAsync(new EndRoomForAll());
 
     public async ValueTask DisposeAsync()
     {
+        _disposing = true;
+        Volatile.Write(ref _signalConnected, 0);
+        await _lifetime.CancelAsync(); await _reconnectTask;
         await _signaling.DisposeAsync();
         await Post(() =>
         {
@@ -126,6 +126,7 @@ public sealed partial class MeshSession : IAsyncDisposable
         });
         _loop.Writer.TryComplete();
         await _loopTask;
+        _lifetime.Dispose();
     }
 
     private Task Post(Func<Task> work)
@@ -157,6 +158,8 @@ public sealed partial class MeshSession : IAsyncDisposable
             {
                 await work();
             }
+            catch (OperationCanceledException) when (_disposing) { }
+            catch (ObjectDisposedException) when (_disposing) { }
 #pragma warning disable CA1031 // Uma falha num evento não pode parar a sessão; é reportada como diagnóstico.
             catch (Exception ex)
 #pragma warning restore CA1031
@@ -173,6 +176,8 @@ public sealed partial class MeshSession : IAsyncDisposable
             case SessionEstablished m:
                 You = m.You;
                 InviteCode = m.InviteCode;
+                _resumeToken = m.ResumeToken;
+                Volatile.Write(ref _signalConnected, 1);
                 break;
             case AdmissionStarted m:
                 foreach (var peer in m.PeersToConnect)
@@ -190,6 +195,7 @@ public sealed partial class MeshSession : IAsyncDisposable
             case PeerAdmitted m:
                 Epoch = m.Epoch;
                 Roster = m.Roster;
+                RebuildAudioTargets();
                 if (m.Admitted == You && !IsAdmitted)
                 {
                     IsAdmitted = true;
@@ -201,6 +207,13 @@ public sealed partial class MeshSession : IAsyncDisposable
                 Epoch = m.Epoch;
                 Roster = m.Roster;
                 Admin = m.Admin;
+                foreach (var remote in _links.Keys.Where(id => Roster.All(p => p.Id != id)).ToArray()) { RemoveLink(remote); _expected.Remove(remote); }
+                UpdateScreenAuthorization(m.Sharer, m.ShareSession);
+                RebuildAudioTargets();
+                _resumeHandshake?.TrySetResult();
+                break;
+            case ShareStateChanged m:
+                UpdateScreenAuthorization(m.Sharer, m.Session);
                 break;
             case AdminChanged m:
                 Admin = m.Admin;
@@ -213,15 +226,29 @@ public sealed partial class MeshSession : IAsyncDisposable
             case DropPeer m:
                 Depart(m.Peer);
                 break;
+            case ParticipantReconnecting m:
+                Roster = [.. Roster.Select(p => p.Id == m.Peer ? p with { State = ParticipantState.Reconnecting } : p)];
+                break;
+            case ParticipantResumed m:
+                Roster = [.. Roster.Select(p => p.Id == m.Peer ? p with { State = ParticipantState.Active } : p)];
+                break;
             case AdmissionFailed m:
+                _terminal = true;
                 AdmissionRejected?.Invoke(m);
                 Ended?.Invoke("admission-failed");
                 break;
             case Kicked:
+                _terminal = true; UpdateScreenAuthorization(null, null);
                 Ended?.Invoke("kicked");
                 break;
             case RoomEnded:
+                _terminal = true; UpdateScreenAuthorization(null, null);
                 Ended?.Invoke("room-ended");
+                break;
+            case SessionInvalid:
+                _terminal = true; UpdateScreenAuthorization(null, null);
+                _resumeHandshake?.TrySetException(new InvalidOperationException("Sessão expirada."));
+                Ended?.Invoke("session-expired");
                 break;
             case CommandRejected m:
                 Diagnostic?.Invoke($"comando recusado: {m.Command} ({m.Reason})");

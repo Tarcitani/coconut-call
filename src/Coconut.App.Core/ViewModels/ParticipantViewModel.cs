@@ -15,6 +15,8 @@ public sealed partial class ParticipantViewModel(ParticipantId id, bool isYou) :
 
     [ObservableProperty]
     public partial string DisplayName { get; set; } = string.Empty;
+    [ObservableProperty]
+    public partial string ConnectionText { get; set; } = string.Empty;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(StatusText))]

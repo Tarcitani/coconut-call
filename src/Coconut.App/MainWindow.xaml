@@ -11,6 +11,7 @@
 
     <!-- A janela só hospeda a página atual; cada área funcional vive na sua view. -->
     <Grid>
+        <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="*" /></Grid.RowDefinitions>
         <Grid.Resources>
             <DataTemplate x:Key="HomeTemplate">
                 <views:HomeView />
@@ -24,7 +25,11 @@
                 Call="{StaticResource CallTemplate}" />
         </Grid.Resources>
 
-        <ContentControl
+        <Button HorizontalAlignment="Right" Margin="8,4" AutomationProperties.Name="Configurações do Coconut" ToolTipService.ToolTip="Configurações do Coconut">
+            <FontIcon Glyph="&#xE713;" FontSize="16" />
+            <Button.Flyout><Flyout><views:DesktopSettingsView DataContext="{x:Bind Settings, Mode=OneWay}" /></Flyout></Button.Flyout>
+        </Button>
+        <ContentControl Grid.Row="1"
             x:Name="PageHost"
             HorizontalContentAlignment="Stretch"
             VerticalContentAlignment="Stretch"

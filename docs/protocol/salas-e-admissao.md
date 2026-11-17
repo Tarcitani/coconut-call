@@ -1,6 +1,6 @@
 # Protocolo de salas, admissão, administração e compartilhamento
 
-Status: **v0.1 — implementado no núcleo (`Coconut.Signaling.Core`), coberto por testes unitários, de regressão e de invariantes com sequências aleatórias; revisado de forma independente em 2026-11-16.** Transporte (WebSocket/TLS), autenticação de sessão e clientes reais ainda não existem. Ver [status](../status.md).
+Status: **v0.1 — implementado no núcleo (`Coconut.Signaling.Core`), coberto por testes unitários, de regressão e de invariantes com sequências aleatórias; revisado de forma independente em 2026-11-16.** Transporte WebSocket/TLS, autenticação de sessão e clientes reais estão implementados; voz, tela e retomada local exercitadas na 0.3.0. Ver [status](../status.md).
 
 ## 1. Princípios
 
@@ -49,10 +49,10 @@ Falha e *rollback*:
 Capacidade: `Pending + Active + Reconnecting ≤ 15`. Excedente recebe `RoomFull`.
 
 **Comportamento do cliente** (`Coconut.Client.MeshSession`, validado no [P2](../benchmarks/2026-11-16-P2-malha-local.md)):
-- Cada enlace tem um canal de dados e uma trilha Opus `sendrecv` (`mid=audio`), criada nos dois lados antes de qualquer descrição.
+- Cada enlace tem canal de dados, trilha Opus e trilha H.264 sendrecv, criadas nos dois lados antes da descrição. Mídia só vai a pares verificados e admitidos.
 - Verificação (nível 2): ao abrir o canal, cada lado envia `probe:<nonce>`; ao receber o eco `probe-ack:<nonce>` reporta `Verified`.
 - SDP e candidatos via `relay` com trickle; candidato do relay = `"<mid>\n<candidato>"`. Candidatos que chegam antes da descrição remota ficam retidos; cada um é aplicado de forma independente.
-- Enlace que cai antes de verificado: o ofertante renegocia com uma conexão nova (até 3 tentativas) e só então reporta `Failed`; o respondente substitui a conexão ao receber nova oferta. Quedas de enlaces já verificados ainda não são tratadas (§8).
+- Enlace que cai antes de verificado: o ofertante renegocia com uma conexão nova (até 3 tentativas) e só então reporta `Failed`; o respondente substitui a conexão ao receber nova oferta. Enlace já verificado que cai perde essa marca, informa o servidor e é renegociado pelo ofertante com tentativas limitadas.
 
 ## 4. Saída, desconexão e reconexão
 
@@ -100,6 +100,10 @@ Contratos em `src/Coconut.Signaling.Contracts/` (`ClientMessages.cs`, `ServerMes
 
 ## 8. Questões em aberto
 
-- Falha de enlace entre dois membros já ativos após a admissão (troca de rede): política de ICE restart e tolerância. Hoje é apenas reportada.
-- Um enlace reportado `Verified` continua valendo até um novo relatório; se ele cair sem relatório, a admissão de um pendente pode usar um estado antigo. Requer que o cliente reporte quedas — a definir com o protocolo do cliente.
+- Troca completa de rede/NAT ainda precisa de validação externa. O cliente 0.3.0 já invalida a verificação e reporta falhas observadas; o ofertante recria o enlace com tentativas limitadas. A sinalização tenta retomar a identidade dentro da tolerância do servidor.
+- Um enlace reportado `Verified` vale até novo relatório. O cliente reporta quedas observadas, mas há uma janela entre falha física e detecção pelo ICE; validar esse intervalo em redes reais.
 - Rotação de convite pelo administrador como mitigação contra convite vazado (ver modelo de ameaças).
+
+## Aplicação de tela no cliente (0.3.0)
+
+RTP H.264 carrega a sessão completa de 128 bits e dimensões em cada pacote. Receptor exige peer autenticado e sessão anunciada pelo servidor antes de remontar, com limites de fragmentos/tamanho; verifica novamente a identidade do frame antes de renderizar. Revogação limpa quadro e decoder. RTCP SR/RR alimenta adaptação; SPS/PPS são repetidos no IDR para entrada tardia. Perda da sinalização suspende autorização; retomada em até 25 s exige snapshot autenticado. Detalhes no [ADR 0006](../adr/0006-tela-e-integracao-windows.md).

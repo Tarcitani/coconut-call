@@ -1,0 +1,16 @@
+<UserControl
+    x:Class="Coconut.App.Views.DesktopSettingsView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <StackPanel Width="320" Spacing="12">
+        <TextBlock Text="Coconut" Style="{StaticResource SubtitleTextBlockStyle}" />
+        <ToggleSwitch Header="Iniciar com o Windows, na bandeja" IsOn="{x:Bind ViewModel.StartWithWindows, Mode=TwoWay}" AutomationProperties.Name="Iniciar com o Windows" />
+        <TextBlock Text="Fechar a janela mantém a chamada na bandeja. Para sair do aplicativo, use Encerrar." TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+        <TextBlock Text="{x:Bind ViewModel.UpdateStatus, Mode=OneWay}" TextWrapping="Wrap" AutomationProperties.Name="Estado das atualizações" />
+        <Button Content="Verificar atualizações" Command="{x:Bind ViewModel.CheckUpdatesCommand}" />
+        <Button Content="Instalar atualização verificada" Command="{x:Bind ViewModel.ApplyUpdateCommand}" />
+        <Button Content="Exportar diagnóstico…" Command="{x:Bind ViewModel.ExportLogsCommand}" />
+        <Button Content="Encerrar aplicativo" Command="{x:Bind ViewModel.ExitCommand}" />
+        <TextBlock Text="{x:Bind ViewModel.Notice, Mode=OneWay}" TextWrapping="Wrap" />
+    </StackPanel>
+</UserControl>

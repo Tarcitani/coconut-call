@@ -8,6 +8,7 @@ public sealed partial class ShellViewModel : ObservableObject
 {
     private readonly IUiDispatcher _ui;
     private readonly IClipboard _clipboard;
+    private Task _ending = Task.CompletedTask;
 
     public ShellViewModel(Func<Uri, ICallBackend> backendFactory, ISettingsStore settings, IUiDispatcher ui, IClipboard clipboard)
     {
@@ -24,13 +25,27 @@ public sealed partial class ShellViewModel : ObservableObject
 
     public CallViewModel? Call => CurrentPage as CallViewModel;
 
+    /// <summary>Receiving a link fills the form; it never joins or ends an existing call.</summary>
+    public void UseInvite(string invite)
+    {
+        Home.UseInvite(invite);
+        if (Call is { } call) { call.Notice = "Convite recebido. Saia da chamada atual para revisar e entrar na outra sala."; }
+    }
+
     private void OnJoined(ICallBackend backend) =>
         CurrentPage = new CallViewModel(backend, _ui, _clipboard, OnEnded);
 
-    private async void OnEnded(CallViewModel call, string message)
+    public async Task CloseAsync()
+    {
+        await Home.StopAsync();
+        if (Call is { } call) { await call.LeaveCommand.ExecuteAsync(null); }
+        await _ending;
+    }
+
+    private void OnEnded(CallViewModel call, string message)
     {
         CurrentPage = Home;
         Home.Error = string.IsNullOrEmpty(message) ? null : message;
-        await call.DisposeAsync();
+        _ending = call.DisposeAsync().AsTask();
     }
 }

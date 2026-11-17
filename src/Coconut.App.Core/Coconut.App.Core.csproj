@@ -2,6 +2,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Coconut.Client\Coconut.Client.csproj" />
+    <ProjectReference Include="..\Coconut.Updates\Coconut.Updates.csproj" />
   </ItemGroup>
 
   <ItemGroup>

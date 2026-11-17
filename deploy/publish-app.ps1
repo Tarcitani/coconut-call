@@ -26,7 +26,7 @@ if (Test-Path -LiteralPath $stage) { Remove-Item -LiteralPath $stage -Recurse -F
 dotnet publish (Join-Path $repo "src\Coconut.App") -c Release -r win-x64 --self-contained true -p:DebugType=None -p:Version=$Version -p:IncludeSourceRevisionInInformationalVersion=false -o $stage
 if ($LASTEXITCODE -ne 0) { throw "dotnet publish falhou" }
 
-$native = "datachannel.dll", "juice.dll", "libcrypto-3-x64.dll", "libssl-3-x64.dll", "opus.dll", "srtp2.dll"
+$native = "datachannel.dll", "juice.dll", "libcrypto-3-x64.dll", "libssl-3-x64.dll", "opus.dll", "srtp2.dll", "Coconut.Screen.Native.dll", "libsodium.dll"
 foreach ($file in @("Coconut.exe", "Coconut.pri", "Assets\Coconut.ico", "coreclr.dll", "hostfxr.dll", "Microsoft.UI.Xaml.dll") + $native) {
     if (-not (Test-Path (Join-Path $stage $file))) { throw "$file ausente na saída do publish" }
 }
@@ -40,7 +40,7 @@ $crt = Get-ChildItem (Join-Path $vs "VC\Redist\MSVC\*\x64\Microsoft.VC14*.CRT") 
     Where-Object { Test-Path (Join-Path $_.FullName "vcruntime140_1.dll") } |
     Sort-Object { [version]$_.Parent.Parent.Name } -Descending | Select-Object -First 1
 if (-not $crt) { throw "Redistribuível do VC++ não encontrado em $vs" }
-foreach ($dll in "msvcp140.dll", "vcruntime140.dll", "vcruntime140_1.dll") { Copy-Item (Join-Path $crt.FullName $dll) $stage }
+Get-ChildItem -LiteralPath $crt.FullName -Filter '*.dll' | Copy-Item -Destination $stage
 
 # 3. Servidor pré-configurado, LEIA-ME e licenças (GPLv3 exige a licença e o acesso ao código-fonte).
 $utf8 = New-Object System.Text.UTF8Encoding($false)
@@ -56,11 +56,21 @@ $share = Join-Path $repo "native\vcpkg_installed\x64-windows\share"
 foreach ($port in "libdatachannel", "libjuice", "libsrtp", "openssl", "opus", "usrsctp", "plog", "nlohmann-json") {
     Copy-Item (Join-Path $share "$port\copyright") (Join-Path $licenses "$port.txt")
 }
+$nugetPackages = if ($env:NUGET_PACKAGES) { $env:NUGET_PACKAGES } else { Join-Path $env:USERPROFILE '.nuget\packages' }
+foreach ($component in @(@('nsec.cryptography','26.4.0'), @('libsodium','1.0.22'))) {
+    $package = Join-Path $nugetPackages "$($component[0])\$($component[1])"
+    Copy-Item (Join-Path $package 'LICENSE') (Join-Path $licenses "$($component[0]).txt")
+    if (Test-Path (Join-Path $package 'NOTICE')) { Copy-Item (Join-Path $package 'NOTICE') (Join-Path $licenses "$($component[0])-NOTICE.txt") }
+    if (Test-Path (Join-Path $package 'AUTHORS')) { Copy-Item (Join-Path $package 'AUTHORS') (Join-Path $licenses "$($component[0])-AUTHORS.txt") }
+}
 [System.IO.File]::WriteAllText((Join-Path $licenses "OUTROS.txt"), @"
 Também incluídos, sob as licenças dos respectivos autores:
 - .NET Runtime e ASP.NET Core - MIT - https://github.com/dotnet/runtime
 - Windows App SDK / WinUI 3 - Microsoft (redistribuível) - https://github.com/microsoft/WindowsAppSDK
 - CommunityToolkit.Mvvm - MIT - https://github.com/CommunityToolkit/dotnet
+- NSec.Cryptography 26.4.0 - MIT - https://github.com/ektrah/nsec
+- libsodium 1.0.22 - ISC - https://github.com/jedisct1/libsodium
+- C++/WinRT (headers do SDK do Windows) - MIT - https://github.com/microsoft/cppwinrt
 - Microsoft Visual C++ Runtime (msvcp140, vcruntime140, vcruntime140_1) - redistribuível da Microsoft
   (Visual Studio Build Tools $($crt.Parent.Parent.Name))
 "@, $utf8)

@@ -42,11 +42,15 @@ public sealed class VoiceReceiver : IDisposable
             }
         }
     }
+    public IReadOnlySet<ParticipantId> DecodedPeers
+    {
+        get { lock (_gate) { return _peers.Where(p => p.Value.HasDecoded).Select(p => p.Key).ToHashSet(); } }
+    }
 
     /// <summary>Pacote RTP de um par. Só Opus (PT 111) é aceito; o resto é ignorado.</summary>
     public void Push(ParticipantId from, ReadOnlySpan<byte> rtpPacket)
     {
-        if (!RtpPacket.TryParse(rtpPacket, out var rtp) || rtp.PayloadType != RtcPeer.OpusPayloadType)
+        if (!RtpPacket.TryParse(rtpPacket, out var rtp) || rtp.PayloadType != RtcPeer.OpusPayloadType || rtp.PayloadLength <= 0)
         {
             return;
         }
@@ -99,6 +103,7 @@ public sealed class VoiceReceiver : IDisposable
                 };
 
                 var pcm = _decoded.AsSpan(0, Math.Clamp(samples, 0, AudioFormat.FrameSamples));
+                if (frame.Kind == JitterFrameKind.Packet && samples > 0) { voice.HasDecoded = true; }
                 voice.LastLevel = AudioMixer.Rms(pcm);
                 AudioMixer.Accumulate(_mix, pcm);
             }
@@ -127,5 +132,6 @@ public sealed class VoiceReceiver : IDisposable
         public OpusDecoder Decoder { get; } = new();
 
         public double LastLevel { get; set; }
+        public bool HasDecoded { get; set; }
     }
 }

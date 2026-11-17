@@ -1,0 +1,64 @@
+<UserControl
+    x:Class="Coconut.App.Views.ScreenShareView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:Coconut.App.Views"
+    xmlns:vm="using:Coconut.App.Core.ViewModels">
+    <Grid RowSpacing="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+        <Grid ColumnSpacing="8">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+            <TextBlock VerticalAlignment="Center" TextWrapping="Wrap" Text="{x:Bind ViewModel.Status, Mode=OneWay}" AutomationProperties.Name="Estado do compartilhamento" />
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                <Button Content="Parar tela" Command="{x:Bind ViewModel.StopCommand}" Visibility="{x:Bind local:Bind.VisibleIf(ViewModel.IsSharing), Mode=OneWay}" />
+                <Button Content="Cancelar pedido" Command="{x:Bind ViewModel.CancelCommand}" Visibility="{x:Bind local:Bind.VisibleIf(ViewModel.IsRequesting), Mode=OneWay}" />
+                <Button Content="Compartilhar tela" AutomationProperties.Name="Compartilhar tela" IsEnabled="{x:Bind CanChoose, Mode=OneWay}">
+                    <Button.Flyout>
+                        <Flyout Placement="Bottom" Opening="OnSettingsOpening">
+                            <ScrollViewer MaxHeight="500" VerticalScrollBarVisibility="Auto">
+                                <StackPanel Width="300" Spacing="12">
+                                    <TextBlock Text="Escolha o monitor inteiro" Style="{StaticResource SubtitleTextBlockStyle}" TextWrapping="Wrap" />
+                                    <ComboBox Header="Monitor" AutomationProperties.Name="Monitor para compartilhar" HorizontalAlignment="Stretch" ItemsSource="{x:Bind ViewModel.Monitors}" DisplayMemberPath="Name" SelectedItem="{x:Bind ViewModel.SelectedMonitor, Mode=TwoWay}" />
+                                    <Button Content="Atualizar monitores" Command="{x:Bind ViewModel.RefreshMonitorsCommand}" />
+                                    <Grid ColumnSpacing="12">
+                                        <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                                        <ComboBox Header="Resolução máxima (p)" ItemsSource="{x:Bind vm:ScreenShareViewModel.Resolutions}" SelectedItem="{x:Bind ViewModel.SelectedHeight, Mode=TwoWay}" AutomationProperties.Name="Resolução da tela" />
+                                        <ComboBox Grid.Column="1" Header="FPS máximo" ItemsSource="{x:Bind vm:ScreenShareViewModel.FrameRates}" SelectedItem="{x:Bind ViewModel.SelectedFps, Mode=TwoWay}" AutomationProperties.Name="FPS da tela" />
+                                    </Grid>
+                                    <NumberBox Header="Bitrate por participante (kbps)" Minimum="256" Maximum="12000" SmallChange="250" SpinButtonPlacementMode="Compact" Value="{x:Bind ViewModel.BitrateKbps, Mode=TwoWay}" />
+                                    <CheckBox Content="Usar codificação por software" IsChecked="{x:Bind ViewModel.ForceSoftware, Mode=TwoWay}" />
+                                    <TextBlock Text="Tudo neste monitor fica visível para a sala. Resolução, FPS e bitrate podem diminuir para preservar a chamada." TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                    <Button Content="{x:Bind ViewModel.ShareButtonText, Mode=OneWay}" Command="{x:Bind ViewModel.RequestCommand}" Style="{StaticResource AccentButtonStyle}" />
+                                </StackPanel>
+                            </ScrollViewer>
+                        </Flyout>
+                    </Button.Flyout>
+                </Button>
+            </StackPanel>
+        </Grid>
+        <Border Grid.Row="1" Style="{StaticResource CardBorderStyle}" Padding="12" Visibility="{x:Bind local:Bind.VisibleIf(ViewModel.HasIncomingRequest), Mode=OneWay}">
+            <StackPanel Spacing="8">
+                <TextBlock Text="Pedido para compartilhar" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                <TextBlock Text="{x:Bind ViewModel.RequestText, Mode=OneWay}" TextWrapping="Wrap" />
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <Button Content="Aceitar troca" Command="{x:Bind ViewModel.AcceptCommand}" Style="{StaticResource AccentButtonStyle}" />
+                    <Button Content="Recusar troca" Command="{x:Bind ViewModel.DeclineCommand}" />
+                </StackPanel>
+            </StackPanel>
+        </Border>
+        <InfoBar Grid.Row="2" IsOpen="{x:Bind local:Bind.HasText(ViewModel.Notice), Mode=OneWay}" Message="{x:Bind ViewModel.Notice, Mode=OneWay}" CloseButtonCommand="{x:Bind ViewModel.DismissNoticeCommand}" Severity="Warning" />
+        <Border Grid.Row="3" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" CornerRadius="8" MinHeight="120">
+            <Grid>
+                <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" Margin="20" TextAlignment="Center" TextWrapping="Wrap" Text="A tela compartilhada aparece aqui. Sua voz continua ativa durante a transmissão." Visibility="{x:Bind local:Bind.VisibleUnless(HasScreen), Mode=OneWay}" />
+                <Viewbox Stretch="Uniform" Visibility="{x:Bind local:Bind.VisibleIf(HasScreen), Mode=OneWay}">
+                    <SwapChainPanel x:Name="VideoPanel" Width="1280" Height="720" AutomationProperties.Name="Vídeo do monitor compartilhado" />
+                </Viewbox>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>
