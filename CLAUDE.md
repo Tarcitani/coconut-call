@@ -25,7 +25,7 @@ src\Coconut.App\bin\Debug\net10.0-windows10.0.26100.0\win-x64\Coconut.exe       
 powershell -NoProfile -ExecutionPolicy Bypass -File prototypes\Tools.UiSmoke\ui-smoke.ps1   # fumaça de UI (abre o app)
 ```
 UI: views em `src/Coconut.App/Views` (uma área por arquivo, x:Bind a ViewModels de `Coconut.App.Core`); lógica e testes ficam no Core. Inspecione a UI em execução (capturas) — compilação não comprova layout.
-Pacote do app (zip portátil, servidor pré-configurado; endereço real fica fora do repositório): `deploy\publish-app.ps1 -Version x.y.z [-Server wss://host/ws]` (release pública: sem `-Server`); testar extraído com `ui-smoke.ps1 -Server … -AppPath …\Coconut.exe -FreshSettings`.
+Distribuição Windows (versão padrão em `VERSION`): `deploy\publish-installer.ps1 [-Version x.y.z] [-Server wss://host/ws]` gera instalador offline, zip e SHA-256; veja `docs/distribuicao-windows.md`. Release pública: sempre sem `-Server`; arquivos `-servidor` são particulares. Só o zip: `deploy\publish-app.ps1`. Ícone vetorial e gerador: `src/Coconut.App/Assets`, `deploy/windows/build-icon.ps1`. Não prometer assinatura/atualização automática: ainda pendentes. Testar extraído com `ui-smoke.ps1 -Server … -AppPath …\Coconut.exe -FreshSettings`.
 Diagnóstico de áudio: `Tools.CallBot <ws> <convite> nome 30 --audio` (envia tom, mede o recebido); log do app em `%LOCALAPPDATA%\Coconut\logs` (sanitizado).
 Implantação (VM gratuita, Caddy + STUN): `deploy\publish.ps1 -Runtime linux-arm64` e [guia](docs/deploy/vm-gratuita.md); scripts Linux em LF (`.gitattributes`).
 Repositório público: https://github.com/Tarcitani/coconut-call — publicar exige autorização do usuário.

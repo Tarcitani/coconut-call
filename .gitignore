@@ -485,6 +485,10 @@ $RECYCLE.BIN/
 **/.omc/*
 !**/.omc/skills/
 
+# Notas de lançamento fazem parte da documentação, não são saídas de build.
+!docs/releases/
+!docs/releases/*.md
+
 # Saída do vcpkg (modo manifesto)
 native/vcpkg_installed/
 

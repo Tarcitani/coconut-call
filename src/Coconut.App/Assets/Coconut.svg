@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <title>Coconut — coco e ondas de voz</title>
+  <rect x="8" y="8" width="240" height="240" rx="56" fill="#087F8C" />
+  <path d="M 47,126 C 50,176 81,211 128,211 C 175,211 206,176 209,126 Z" fill="#663C2D" />
+  <path d="M 59,149 C 70,183 95,200 128,200 C 151,200 171,191 184,176" fill="none" stroke="#A96D47" stroke-width="8" stroke-linecap="round" />
+  <path d="M 47,126 C 47,104 83,88 128,88 C 173,88 209,104 209,126 C 209,148 173,165 128,165 C 83,165 47,148 47,126 Z" fill="#FFEFDA" />
+  <path d="M 60,126 C 60,110 90,100 128,100 C 166,100 196,110 196,126 C 196,142 166,153 128,153 C 90,153 60,142 60,126 Z" fill="#FFFFFF" />
+  <path d="M 98,113 L 98,132 M 128,68 L 128,137 M 158,96 L 158,133" fill="none" stroke="#087F8C" stroke-width="13" stroke-linecap="round" />
+  <path d="M 83,69 L 83,79 M 108,48 L 108,59 M 153,49 L 153,66 M 177,70 L 177,80" fill="none" stroke="#9DE6D0" stroke-width="8" stroke-linecap="round" />
+</svg>

@@ -1,6 +1,7 @@
 <Project>
   <!-- Configuração comum a todos os projetos C# do Coconut. -->
   <PropertyGroup>
+    <Version>$([System.IO.File]::ReadAllText('$(MSBuildThisFileDirectory)VERSION').Trim())</Version>
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>

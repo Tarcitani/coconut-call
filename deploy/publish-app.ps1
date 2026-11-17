@@ -1,4 +1,5 @@
-# Gera o pacote portátil do app Coconut (Windows 11 x64): zip autocontido, sem instalador (P7 pendente).
+﻿# Gera o payload autocontido e o zip portátil do app Coconut (Windows 11 x64).
+# Para gerar também o instalador offline, use publish-installer.ps1.
 # Uso: powershell -NoProfile -ExecutionPolicy Bypass -File deploy\publish-app.ps1 [-Server wss://seu-host/ws] [-Version 0.1.0]
 #   -Server vai só para coconut.defaults.json dentro do pacote (nunca para o repositório) e vale enquanto
 #   a pessoa não tiver configurações próprias. Sem -Server (pacote público): a pessoa informa o servidor
@@ -7,7 +8,7 @@ param(
     [ValidatePattern('^(wss://[^/\s]+/ws)?$')]
     [string]$Server = "",
     [ValidatePattern('^\d+\.\d+\.\d+$')]
-    [string]$Version = "0.0.0"
+    [string]$Version = (Get-Content (Join-Path $PSScriptRoot "..\VERSION") -Raw).Trim()
 )
 $ErrorActionPreference = "Stop"
 $repo = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
@@ -15,14 +16,18 @@ $name = if ($Server) { "Coconut-$Version-win-x64-servidor" } else { "Coconut-$Ve
 $stage = Join-Path $repo "artifacts\app\$name"
 $archive = Join-Path $repo "artifacts\app\$name.zip"
 
-if (Test-Path $stage) { Remove-Item $stage -Recurse -Force }
+# Qualquer limpeza recursiva deve continuar estritamente dentro de artifacts\app.
+$outputRoot = [System.IO.Path]::GetFullPath((Join-Path $repo "artifacts\app")) + [System.IO.Path]::DirectorySeparatorChar
+$stage = [System.IO.Path]::GetFullPath($stage)
+if (-not $stage.StartsWith($outputRoot, [System.StringComparison]::OrdinalIgnoreCase)) { throw "Pasta de saída inválida: $stage" }
+if (Test-Path -LiteralPath $stage) { Remove-Item -LiteralPath $stage -Recurse -Force }
 
 # 1. App autocontido: .NET e Windows App SDK vão junto.
-dotnet publish (Join-Path $repo "src\Coconut.App") -c Release -r win-x64 --self-contained true -p:DebugType=None -p:Version=$Version -o $stage
+dotnet publish (Join-Path $repo "src\Coconut.App") -c Release -r win-x64 --self-contained true -p:DebugType=None -p:Version=$Version -p:IncludeSourceRevisionInInformationalVersion=false -o $stage
 if ($LASTEXITCODE -ne 0) { throw "dotnet publish falhou" }
 
 $native = "datachannel.dll", "juice.dll", "libcrypto-3-x64.dll", "libssl-3-x64.dll", "opus.dll", "srtp2.dll"
-foreach ($file in @("Coconut.exe", "Coconut.pri") + $native) {
+foreach ($file in @("Coconut.exe", "Coconut.pri", "Assets\Coconut.ico", "coreclr.dll", "hostfxr.dll", "Microsoft.UI.Xaml.dll") + $native) {
     if (-not (Test-Path (Join-Path $stage $file))) { throw "$file ausente na saída do publish" }
 }
 
@@ -44,6 +49,7 @@ if ($Server) {
 }
 Copy-Item (Join-Path $repo "deploy\windows\LEIA-ME.txt") $stage
 Copy-Item (Join-Path $repo "LICENSE") (Join-Path $stage "LICENCA.txt")
+[System.IO.File]::WriteAllText((Join-Path $stage "CODIGO-FONTE.txt"), "Coconut $Version`r`nhttps://github.com/Tarcitani/coconut-call/tree/v$Version`r`nCompilação e dependências: docs/distribuicao-windows.md no repositório.`r`n", $utf8)
 $licenses = Join-Path $stage "licencas-terceiros"
 New-Item -ItemType Directory -Force $licenses | Out-Null
 $share = Join-Path $repo "native\vcpkg_installed\x64-windows\share"

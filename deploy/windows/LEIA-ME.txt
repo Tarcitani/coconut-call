@@ -6,7 +6,7 @@ computador para o outro (P2P, criptografado); o servidor só apresenta os
 participantes e nunca recebe o áudio.
 
 SERVIDOR
-Se você recebeu este zip de quem vai te chamar, o servidor já vem configurado.
+Se você recebeu um pacote particular, o servidor pode vir configurado.
 Se baixou do GitHub, peça o endereço do servidor (começa com wss://) a quem
 vai te chamar e informe em "Avançado" > "Servidor de sinalização", na tela
 inicial. Todos na mesma sala precisam usar o mesmo servidor.
@@ -15,15 +15,30 @@ REQUISITOS
 - Windows 11, 64 bits. Não precisa instalar .NET nem nenhum outro programa.
 - Microfone. Fone de ouvido é recomendado (evita eco e microfonia).
 
-COMO ABRIR
-1. Extraia o zip inteiro para uma pasta (por exemplo, Documentos\Coconut).
-   Não abra o app de dentro do zip.
-2. Na pasta extraída, abra "Coconut.exe".
-3. O Windows pode avisar "O Windows protegeu o computador" (SmartScreen),
-   porque esta versão de teste não tem assinatura digital. Clique em
-   "Mais informações" e depois em "Executar assim mesmo".
-4. Se o Firewall do Windows perguntar, clique em "Permitir". Sem isso a
+COMO INSTALAR E ABRIR
+1. Baixe o arquivo Coconut-<versão>-win-x64-Setup.exe nos lançamentos do GitHub
+   e execute o instalador. Ele inclui .NET, Windows App SDK, runtime do Visual
+   C++ e as bibliotecas de áudio/rede; não precisa baixar dependências.
+2. Abra "Coconut" pelo menu Iniciar. A instalação é só para o seu usuário,
+   em %LOCALAPPDATA%\Programs\Coconut, sem exigir administrador.
+3. O instalador e o app ainda não têm assinatura digital; o SmartScreen pode
+   mostrar um aviso. Confira se o arquivo veio da release oficial e compare
+   o SHA-256 com o arquivo SHA256SUMS antes de decidir executá-lo.
+4. Se o Firewall do Windows perguntar, permita o app nas redes de sua escolha. Sem isso a
    conexão direta entre vocês pode falhar.
+
+ALTERNATIVA PORTÁTIL
+Extraia o zip inteiro para uma pasta e abra Coconut.exe dessa pasta.
+Não execute o aplicativo de dentro do zip. Não é necessário usar o instalador.
+
+ATUALIZAR E DESINSTALAR
+- Para atualizar, feche o Coconut e execute o instalador da versão nova.
+  Ele substitui os arquivos do app e preserva suas configurações e logs.
+- Para remover, use Configurações > Aplicativos > Aplicativos instalados >
+  Coconut > Desinstalar. Seus dados em %LOCALAPPDATA%\Coconut são preservados;
+  você pode apagar essa pasta depois, se quiser remover também os dados.
+- Se usar o zip portátil, extraia cada versão numa pasta nova.
+- Não há atualização automática nesta versão.
 
 COMO USAR
 - Criar uma sala: digite seu nome e clique em "Criar sala". Na tela da
@@ -50,14 +65,11 @@ SE ALGO DER ERRADO (por exemplo, vocês não se ouvem)
 
 LIMITAÇÕES DESTA VERSÃO DE TESTE
 - Só voz: compartilhamento de tela ainda não existe.
-- Sem instalador nem atualização automática: para atualizar, apague a pasta e
-  extraia o zip novo.
 - Não há servidor de retransmissão (por decisão de projeto). Em algumas redes
   (4G/5G, redes de empresa ou faculdade) a conexão direta pode não acontecer e
   a chamada não conecta. Se isso ocorrer, anote o tipo de rede de cada um:
   essa informação é justamente o que este teste quer descobrir.
-- Configurações ficam em %LOCALAPPDATA%\Coconut. Para remover o app, apague a
-  pasta extraída e essa pasta de configurações.
+- Configurações e logs ficam em %LOCALAPPDATA%\Coconut.
 
 LICENÇA E CÓDIGO-FONTE
 Software livre sob a GNU GPL versão 3 (veja LICENCA.txt).

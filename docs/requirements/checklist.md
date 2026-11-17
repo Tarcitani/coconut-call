@@ -30,7 +30,7 @@ Fonte dos requisitos: prompt mestre do produto (contrato §1–§7). Evidências
 | SCR-4 | Voz preservada durante compartilhamento | pendente | P6 |
 | WIN-1 | Fechar → bandeja; bandeja abre, silencia, encerra | pendente | P5 |
 | WIN-2 | Inicialização automática opcional (desligada), na bandeja, instância única | pendente | P5 |
-| DST-1 | Instalador e atualização automática verificada | pendente | P7. Provisório: zip portátil sem assinatura, testado extraído contra a nuvem ([pacote](../benchmarks/2026-11-16-pacote-app.md)) |
+| DST-1 | Instalador e atualização automática verificada | validado-local (instalador); pendente (assinatura/atualização automática) | 0.2.0: Setup offline por usuário, dependências incluídas, atualização manual 0.1.1 → 0.2.0, atalhos, 479 hashes e desinstalação preservando preferências ([evidência](../benchmarks/2026-11-16-instalador-windows.md)); Windows limpo e assinatura pendentes |
 | SEC-1 | Análise de ameaças | projetado | [Modelo de ameaças](../security/modelo-de-ameacas.md) (inicial) |
 | SEC-2 | Logs locais com retenção, exportação sanitizada e testes de sanitização | em andamento | Servidor: teste `Logs_never_contain_secrets_*`. Cliente: `FileDiagnosticLog` (7 dias, 5 MB/dia) + `LogSanitizer` (IPs, convites, tokens, SDP), 15 testes; log real conferido sem IPs/convites. Exportação pela UI pendente (hoje: pasta indicada no LEIA-ME) |
 | PERF-1 | Benchmarks reprodutíveis | projetado | [Plano](../prototypes/plano.md) |

@@ -14,6 +14,7 @@ public sealed partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        AppWindow.SetIcon(Path.Combine(AppContext.BaseDirectory, "Assets", "Coconut.ico"));
         AppWindow.Resize(new SizeInt32(960, 680));
         if (AppWindow.Presenter is OverlappedPresenter presenter)
         {

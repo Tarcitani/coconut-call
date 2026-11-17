@@ -8,6 +8,7 @@
     <RootNamespace>Coconut.App</RootNamespace>
     <AssemblyName>Coconut</AssemblyName>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Assets\Coconut.ico</ApplicationIcon>
     <Platforms>x64</Platforms>
     <PlatformTarget>x64</PlatformTarget>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
@@ -27,6 +28,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Content Include="Assets\Coconut.ico" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <ProjectReference Include="..\Coconut.App.Core\Coconut.App.Core.csproj" />
   </ItemGroup>
 

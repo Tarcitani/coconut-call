@@ -39,11 +39,13 @@ Atualizado: 2026-11-16
 
 - **Primeira chamada real (0.1.0): admitidos, mas sem áudio nos dois sentidos.** Não reproduzido neste PC (app↔bot com áudio, dois apps, troca para o G435, pela nuvem: tudo funcionou). Causa não identificada; o app descartava erros de áudio em silêncio. 0.1.1 mostra falhas na tela e grava log local sanitizado ([investigação](benchmarks/2026-11-16-audio-chamada-real.md)).
 
+- **Distribuição 0.2.0 — instalador offline Windows 11 x64**: `deploy/publish-installer.ps1` gera Setup (~48 MiB), zip e SHA-256 com .NET, WinUI, VC++ e nativos incluídos, sem exigir administrador. Atalhos, atualização manual e desinstalação; ícone original SVG/PNG/ICO no app e instalador; versão única em `VERSION`; README com download direto. **523/523 testes**. Instalação 0.1.1 → 0.2.0, reinstalação, 479 hashes no instalado/zip, atalhos e desinstalação preservando preferências verificados. Abertura e runtimes locais observados; captura visual inconclusiva. [Arquitetura/distribuição](distribuicao-windows.md), [evidência](benchmarks/2026-11-16-instalador-windows.md), [release v0.2.0](https://github.com/Tarcitani/coconut-call/releases/tag/v0.2.0). Pacote público continua sem servidor particular. Assinatura e atualização automática permanecem pendentes.
+
 ## O que falta para duas pessoas conversarem
 Tudo está pronto para a primeira chamada real. Falta:
 1. **Repetir a chamada real com 0.1.1** e trazer os dois logs (`%LOCALAPPDATA%\Coconut\logs`): eles dizem se o microfone capturou, se a saída tocou, se chegaram pacotes e por qual tipo de conexão.
 2. Supressão de ruído por IA volta ligada quando o microfone é reaberto (troca de dispositivo) — corrigir.
-3. Instalador assinado e atualização verificada (P7); o zip não tem assinatura (SmartScreen avisa).
+3. Assinar os pacotes e implementar atualização automática verificada (P7); o instalador 0.2.0 já funciona com atualização manual, mas ainda não tem assinatura (SmartScreen pode avisar). Validar também num Windows limpo.
 4. Depois: tela (P4), bandeja/protocolo/instância única (P5).
 
 ## Decisões pendentes do usuário
