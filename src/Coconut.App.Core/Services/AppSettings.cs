@@ -7,7 +7,7 @@ public sealed record AppSettings
 {
     public string DisplayName { get; init; } = string.Empty;
 
-    /// <summary>Servidor de sinalização. Padrão: local, para desenvolvimento (não há servidor público ainda).</summary>
+    /// <summary>Servidor de sinalização. Padrão: local, para desenvolvimento; o pacote distribuído traz o seu.</summary>
     public string ServerAddress { get; init; } = "ws://127.0.0.1:5080/ws";
 
     /// <summary>O aviso de exposição de IP entre participantes já foi exibido.</summary>
@@ -21,22 +21,38 @@ public interface ISettingsStore
     void Save(AppSettings settings);
 }
 
-/// <summary>JSON em %LOCALAPPDATA%\Coconut\settings.json. Falhas de leitura voltam ao padrão.</summary>
-public sealed class JsonSettingsStore(string? directory = null) : ISettingsStore
+/// <summary>
+/// JSON em %LOCALAPPDATA%\Coconut\settings.json. Enquanto o usuário não tem configurações próprias, vale
+/// o arquivo de padrões que acompanha o pacote (<see cref="DefaultsFileName"/> ao lado do executável),
+/// que só pré-configura o servidor. Falhas de leitura voltam ao padrão.
+/// </summary>
+public sealed class JsonSettingsStore(string? directory = null, string? defaultsDirectory = null) : ISettingsStore
 {
+    public const string DefaultsFileName = "coconut.defaults.json";
+
     private readonly string _path = Path.Combine(
         directory ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Coconut"),
         "settings.json");
 
-    public AppSettings Load()
+    private readonly string _defaultsPath = Path.Combine(defaultsDirectory ?? AppContext.BaseDirectory, DefaultsFileName);
+
+    public AppSettings Load() => Read(_path) ?? Defaults();
+
+    private AppSettings Defaults()
+    {
+        var packaged = Read(_defaultsPath);
+        return packaged is null ? new() : new() { ServerAddress = packaged.ServerAddress };
+    }
+
+    private static AppSettings? Read(string path)
     {
         try
         {
-            return File.Exists(_path) ? JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(_path)) ?? new() : new();
+            return File.Exists(path) ? JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(path)) : null;
         }
         catch (Exception ex) when (ex is IOException or JsonException or UnauthorizedAccessException)
         {
-            return new();
+            return null;
         }
     }
 

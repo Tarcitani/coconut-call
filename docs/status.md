@@ -15,13 +15,13 @@ Atualizado: 2026-11-16
 - **P1 — sucesso local** (9/9 execuções): dois processos .NET, sem servidores ICE, DTLS-SRTP, canal de dados com eco, 150/150 quadros Opus decodificados com tom 440 Hz íntegro. [Evidência](benchmarks/2026-11-16-P1-webrtc-local.md). ADR 0002 aceito.
 
 - Repositório público: https://github.com/Tarcitani/coconut-call (publicação autorizada pelo usuário).
-- **Servidor de sinalização** (`src/Coconut.Signaling.Server`, ASP.NET Core): WebSocket `/ws`, um ator por sala sobre o núcleo, convites de 50 bits, tokens de retomada guardados como hash, limites de tamanho/taxa/handshake/salas por origem, TLS obrigatório fora do loopback. **64/64 testes de integração** (estáveis em 5 repetições), incluindo sanitização de logs. Processo real verificado em loopback (`/healthz` 200) e recusando HTTP em `0.0.0.0`.
+- **Servidor de sinalização** (`src/Coconut.Signaling.Server`, ASP.NET Core): WebSocket `/ws`, um ator por sala sobre o núcleo, convites de 50 bits, tokens de retomada guardados como hash, limites de tamanho/taxa/handshake/salas por origem, TLS obrigatório fora do loopback. **84/84 testes de integração**, incluindo sanitização de logs. Processo real verificado em loopback (`/healthz` 200) e recusando HTTP em `0.0.0.0`.
 
 - **Cliente e malha P2P** (`src/Coconut.Media.Native`, `src/Coconut.Client`): interop de produção (`RtcPeer` com registro de IDs seguro contra callbacks tardios; TURN recusado por construção), Opus, RTP, cliente de sinalização e `MeshSession` (segue o servidor, trickle ICE, verificação por eco, renegociação de enlaces que caem antes de verificados, áudio codificado uma vez e enviado a todos). **P2 — sucesso local**: N=2…15; com 15 processos entrando juntos, 40/40 execuções com 105 enlaces e áudio íntegro entre todos. [Evidência](benchmarks/2026-11-16-P2-malha-local.md).
 
 - **Áudio** (`src/Coconut.Audio`, `src/Coconut.Client/Voice`, [ADR 0004](adr/0004-audio-wasapi.md)): interop WASAPI própria (48 kHz mono, conversão pelo Windows), catálogo de dispositivos com notificações, categoria Communications com AEC e referência apontada à saída, **supressão de ruído por IA desligada** (confirmado pelo Windows), jitter buffer com ocultação de perda, mixer, motor de voz com mudo antes do codificador, troca de dispositivo e recuperação. 23 testes (mudo provado por mutação) e sonda em hardware real ([P3](benchmarks/2026-11-16-P3-audio-local.md)).
 
-- **App WinUI 3** (`src/Coconut.App`, `src/Coconut.App.Core`): Windows App SDK 2.6.5 autocontido, não empacotado, compilado pelo `dotnet` CLI. Tela inicial (nome, criar, entrar por código ou `coconut://join/…`, aviso de IP, servidor em "Avançado"), chamada (participantes com indicador de fala, convite copiável, mudo, nível do microfone, dispositivos, sair, remover e encerrar para todos se administrador). 29 testes de ViewModel; [teste de fumaça de ponta a ponta](benchmarks/2026-11-16-UI-fumaca-local.md) com app real, servidor e bot.
+- **App WinUI 3** (`src/Coconut.App`, `src/Coconut.App.Core`): Windows App SDK 2.6.5 autocontido, não empacotado, compilado pelo `dotnet` CLI. Tela inicial (nome, criar, entrar por código ou `coconut://join/…`, aviso de IP, servidor em "Avançado"), chamada (participantes com indicador de fala, convite copiável, mudo, nível do microfone, dispositivos, sair, remover e encerrar para todos se administrador). 39 testes (ViewModels e configurações); [teste de fumaça de ponta a ponta](benchmarks/2026-11-16-UI-fumaca-local.md) com app real, servidor e bot.
 
 ## Validação pendente
 - P1 entre redes distintas (NAT/CGNAT, IPv6) — depende de ambiente externo.
@@ -34,10 +34,12 @@ Atualizado: 2026-11-16
 
 - **Servidor no ar** numa VM Oracle *Always Free* (E2.1.Micro, São Paulo) do usuário — endereço fora do repositório público. Verificado pela internet: TLS Let's Encrypt, STUN (`srflx`), app real + bot de ponta a ponta pela sinalização na nuvem ([evidência](benchmarks/2026-11-16-implantacao-vm.md)).
 
+- **Pacote portátil do app** (`deploy\publish-app.ps1 -Server …`): zip autocontido com servidor pré-configurado, runtime do VC++ local, LEIA-ME e licenças. Testado extraído, com configurações zeradas, contra a VM ([evidência](benchmarks/2026-11-16-pacote-app.md)). O teste revelou e corrigiu um laço infinito no servidor (segunda sala do mesmo endereço), já reimplantado.
+
 ## O que falta para duas pessoas conversarem
 Tudo está pronto para a primeira chamada real. Falta:
-1. **Teste com duas pessoas em redes diferentes:** cada uma roda o app, põe o servidor em **Avançado**, uma cria a sala e manda o link. Medir: conexão P2P (NAT/CGNAT), qualidade, eco, latência.
-2. Distribuição do app para quem não compila: instalador (P7). Até lá, a pasta de build pode ser copiada.
+1. **Teste com duas pessoas em redes diferentes:** mandar o zip (`artifacts\app\Coconut-win-x64.zip`); uma pessoa cria a sala e manda o convite. Medir: conexão P2P (NAT/CGNAT), qualidade, eco, latência.
+2. Instalador assinado e atualização verificada (P7); o zip não tem assinatura (SmartScreen avisa).
 3. Depois: tela (P4), bandeja/protocolo/instância única (P5).
 
 ## Decisões pendentes do usuário

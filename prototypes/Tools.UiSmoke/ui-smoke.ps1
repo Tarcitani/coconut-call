@@ -4,10 +4,17 @@
 # Uso: powershell -NoProfile -ExecutionPolicy Bypass -File prototypes\Tools.UiSmoke\ui-smoke.ps1 [-Server wss://host/ws]
 #   Sem -Server: sobe um servidor local. Com -Server: usa o servidor remoto (o endereço é gravado
 #   temporariamente nas configurações do app e o arquivo original é restaurado no fim).
+#   -AppPath: outro Coconut.exe (ex.: o pacote extraído). -FreshSettings (com -Server): em vez de gravar o
+#   endereço, remove temporariamente as configurações, como num PC novo; o app usa o coconut.defaults.json
+#   do pacote, e -Server só diz ao bot e à verificação de saúde aonde ir.
 param(
     [string]$Repo = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path,
-    [string]$Server = ""
+    [string]$Server = "",
+    [string]$AppPath = "",
+    [switch]$FreshSettings
 )
+if (-not $AppPath) { $AppPath = Join-Path $Repo "src\Coconut.App\bin\Debug\net10.0-windows10.0.26100.0\win-x64\Coconut.exe" }
+if ($FreshSettings -and -not $Server) { throw "-FreshSettings exige -Server" }
 $ErrorActionPreference = "Stop"
 $app = $null
 $bot = $null
@@ -41,10 +48,14 @@ if ($Server) {
     $signalingUrl = $Server
     $health = ($Server -replace '^wss://', 'https://' -replace '^ws://', 'http://') -replace '/ws$', '/healthz'
     if (Test-Path $settingsPath) { $settingsBackup = [System.IO.File]::ReadAllText($settingsPath) }
-    $settings = if ($settingsBackup) { $settingsBackup | ConvertFrom-Json } else { [pscustomobject]@{} }
-    $settings | Add-Member -NotePropertyName ServerAddress -NotePropertyValue $Server -Force
-    New-Item -ItemType Directory -Force (Split-Path $settingsPath) | Out-Null
-    [System.IO.File]::WriteAllText($settingsPath, ($settings | ConvertTo-Json -Compress))
+    if ($FreshSettings) {
+        Remove-Item $settingsPath -ErrorAction SilentlyContinue
+    } else {
+        $settings = if ($settingsBackup) { $settingsBackup | ConvertFrom-Json } else { [pscustomobject]@{} }
+        $settings | Add-Member -NotePropertyName ServerAddress -NotePropertyValue $Server -Force
+        New-Item -ItemType Directory -Force (Split-Path $settingsPath) | Out-Null
+        [System.IO.File]::WriteAllText($settingsPath, ($settings | ConvertTo-Json -Compress))
+    }
 } else {
     $signalingUrl = "ws://127.0.0.1:5080/ws"
     $health = "http://127.0.0.1:5080/healthz"
@@ -58,7 +69,7 @@ for ($i = 0; $i -lt 50 -and -not $ok; $i++) { try { $ok = (Invoke-WebRequest -Us
 
 try {
     # 2. App
-    $app = Start-Process (Join-Path $Repo "src\Coconut.App\bin\Debug\net10.0-windows10.0.26100.0\win-x64\Coconut.exe") -PassThru
+    $app = Start-Process $AppPath -PassThru
     Start-Sleep -Seconds 4
     $app.Refresh()
     $win = $AE::FromHandle($app.MainWindowHandle)
@@ -81,6 +92,10 @@ try {
         -RedirectStandardOutput (Join-Path $out "bot.out.txt") -RedirectStandardError (Join-Path $out "bot.err.txt")
     Start-Sleep -Seconds 4
     Shot $app "2-com-bot.png"
+    # De onde vieram os nativos e o runtime do VC++ (no pacote: da própria pasta do app).
+    $app.Refresh()
+    $app.Modules | Where-Object { $_.ModuleName -match '^(datachannel|msvcp140|vcruntime140(_1)?)\.dll$' } |
+        ForEach-Object { "módulo: $($_.FileName)" }
 
     # 6. Administrador remove o bot pela UI
     Invoke-Named $win "Remover da sala"

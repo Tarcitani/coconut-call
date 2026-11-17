@@ -102,15 +102,26 @@ internal sealed class RoomRegistry(SignalingOptions options, TimeProvider clock,
 
     private bool TryReserveRoomSlot(string address)
     {
+        // A presença da chave decide entre TryAdd e TryUpdate (nunca o valor: uma chave com 0 faria
+        // TryAdd falhar para sempre). Cada volta só se repete se outra thread mudou a entrada.
         while (true)
         {
-            var current = _roomsPerAddress.GetValueOrDefault(address);
+            if (!_roomsPerAddress.TryGetValue(address, out var current))
+            {
+                if (_roomsPerAddress.TryAdd(address, 1))
+                {
+                    return true;
+                }
+
+                continue;
+            }
+
             if (current >= options.MaxRoomsPerAddress)
             {
                 return false;
             }
 
-            if (current == 0 ? _roomsPerAddress.TryAdd(address, 1) : _roomsPerAddress.TryUpdate(address, current + 1, current))
+            if (_roomsPerAddress.TryUpdate(address, current + 1, current))
             {
                 return true;
             }
@@ -125,7 +136,11 @@ internal sealed class RoomRegistry(SignalingOptions options, TimeProvider clock,
             _sessions.TryRemove(hash, out _);
         }
 
-        _roomsPerAddress.AddOrUpdate(actor.CreatorAddress, 0, (_, n) => Math.Max(0, n - 1));
+        // Endereço sem salas sai da memória (remoção só se ainda for 0: outra criação pode ter chegado).
+        if (_roomsPerAddress.AddOrUpdate(actor.CreatorAddress, 0, (_, n) => Math.Max(0, n - 1)) == 0)
+        {
+            _roomsPerAddress.TryRemove(new KeyValuePair<string, int>(actor.CreatorAddress, 0));
+        }
         _ = actor.DisposeAsync().AsTask();
     }
 

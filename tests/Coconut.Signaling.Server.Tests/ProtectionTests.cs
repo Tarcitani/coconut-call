@@ -110,6 +110,24 @@ public sealed class ProtectionTests
         Assert.Equal("RoomLimit", (await second.ExpectAsync<CommandRejected>()).Reason);
     }
 
+    /// <summary>
+    /// Regressão (encontrada na VM, 2026-11-16): a contagem voltava a 0 mas a chave ficava, e a criação
+    /// seguinte do mesmo endereço entrava em laço infinito (TryAdd falhava para sempre), girando uma thread.
+    /// </summary>
+    [Fact]
+    public async Task Room_slot_is_released_when_the_room_closes()
+    {
+        await using var host = new SignalingTestHost(o => o.MaxRoomsPerAddress = 1);
+        for (var i = 0; i < 3; i++)
+        {
+            await using var creator = await host.ConnectAsync();
+            await creator.SendAsync(new CreateRoom("Ana"));
+            await creator.ExpectAsync<RoomSnapshot>();
+            await creator.SendAsync(new LeaveRoom());
+            await creator.ExpectClosedAsync();
+        }
+    }
+
     [Theory]
     [InlineData("203.0.113.9", "http", 403)]
     [InlineData("203.0.113.9", "https", 200)]

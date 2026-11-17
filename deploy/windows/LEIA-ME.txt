@@ -1,0 +1,51 @@
+COCONUT - chamadas de voz ponto a ponto (versão de teste)
+=========================================================
+
+O Coconut é um app de chamada de voz para Windows 11. O áudio vai direto de um
+computador para o outro (P2P, criptografado); o servidor só apresenta os
+participantes e nunca recebe o áudio. O servidor já vem configurado neste pacote.
+
+REQUISITOS
+- Windows 11, 64 bits. Não precisa instalar .NET nem nenhum outro programa.
+- Microfone. Fone de ouvido é recomendado (evita eco e microfonia).
+
+COMO ABRIR
+1. Extraia o zip inteiro para uma pasta (por exemplo, Documentos\Coconut).
+   Não abra o app de dentro do zip.
+2. Na pasta extraída, abra "Coconut.exe".
+3. O Windows pode avisar "O Windows protegeu o computador" (SmartScreen),
+   porque esta versão de teste não tem assinatura digital. Clique em
+   "Mais informações" e depois em "Executar assim mesmo".
+4. Se o Firewall do Windows perguntar, clique em "Permitir". Sem isso a
+   conexão direta entre vocês pode falhar.
+
+COMO USAR
+- Criar uma sala: digite seu nome e clique em "Criar sala". Na tela da
+  chamada, copie o convite e mande para quem vai entrar (WhatsApp etc.).
+- Entrar numa sala: digite seu nome, cole o convite no campo
+  "Código ou link do convite" e clique em "Entrar".
+  (Clicar no link coconut://... ainda não abre o app: cole no campo.)
+- Na chamada: botão de mudo, troca de microfone e saída de áudio, e "Sair".
+  Quem criou a sala pode remover participantes e encerrar para todos.
+
+PRIVACIDADE (leia)
+- Numa chamada P2P, cada participante recebe o endereço IP dos outros: é assim
+  que a conexão direta funciona. Entre só em salas com pessoas que você conhece.
+- O servidor não recebe nem grava áudio, e não registra endereços IP.
+  O app não grava as chamadas.
+
+LIMITAÇÕES DESTA VERSÃO DE TESTE
+- Só voz: compartilhamento de tela ainda não existe.
+- Sem instalador nem atualização automática: para atualizar, apague a pasta e
+  extraia o zip novo.
+- Não há servidor de retransmissão (por decisão de projeto). Em algumas redes
+  (4G/5G, redes de empresa ou faculdade) a conexão direta pode não acontecer e
+  a chamada não conecta. Se isso ocorrer, anote o tipo de rede de cada um:
+  essa informação é justamente o que este teste quer descobrir.
+- Configurações ficam em %LOCALAPPDATA%\Coconut. Para remover o app, apague a
+  pasta extraída e essa pasta de configurações.
+
+LICENÇA E CÓDIGO-FONTE
+Software livre sob a GNU GPL versão 3 (veja LICENCA.txt).
+Código-fonte: https://github.com/Tarcitani/coconut-call
+Componentes de terceiros e suas licenças: pasta "licencas-terceiros".
