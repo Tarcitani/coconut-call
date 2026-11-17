@@ -35,6 +35,7 @@ Atualizado: 2026-11-16
 - **Servidor no ar** numa VM Oracle *Always Free* (E2.1.Micro, São Paulo) do usuário — endereço fora do repositório público. Verificado pela internet: TLS Let's Encrypt, STUN (`srflx`), app real + bot de ponta a ponta pela sinalização na nuvem ([evidência](benchmarks/2026-11-16-implantacao-vm.md)).
 
 - **Pacote portátil do app** (`deploy\publish-app.ps1 -Server …`): zip autocontido com servidor pré-configurado, runtime do VC++ local, LEIA-ME e licenças. Testado extraído, com configurações zeradas, contra a VM ([evidência](benchmarks/2026-11-16-pacote-app.md)). O teste revelou e corrigiu um laço infinito no servidor (segunda sala do mesmo endereço), já reimplantado.
+- **Release v0.1.0** (pré-lançamento, autorizada pelo usuário): https://github.com/Tarcitani/coconut-call/releases/tag/v0.1.0 — zip público **sem** servidor (cada pessoa informa em Avançado; testado extraído com servidor local). O zip com o servidor do usuário é distribuído só em particular.
 
 ## O que falta para duas pessoas conversarem
 Tudo está pronto para a primeira chamada real. Falta:

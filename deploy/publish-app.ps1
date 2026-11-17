@@ -1,22 +1,24 @@
 # Gera o pacote portátil do app Coconut (Windows 11 x64): zip autocontido, sem instalador (P7 pendente).
-# Uso: powershell -NoProfile -ExecutionPolicy Bypass -File deploy\publish-app.ps1 -Server wss://seu-host/ws
+# Uso: powershell -NoProfile -ExecutionPolicy Bypass -File deploy\publish-app.ps1 [-Server wss://seu-host/ws] [-Version 0.1.0]
 #   -Server vai só para coconut.defaults.json dentro do pacote (nunca para o repositório) e vale enquanto
-#   a pessoa não tiver configurações próprias.
+#   a pessoa não tiver configurações próprias. Sem -Server (pacote público): a pessoa informa o servidor
+#   em Avançado. -Version entra no nome do zip e na versão do executável.
 param(
-    [Parameter(Mandatory = $true)]
-    [ValidatePattern('^wss://[^/\s]+/ws$')]
-    [string]$Server
+    [ValidatePattern('^(wss://[^/\s]+/ws)?$')]
+    [string]$Server = "",
+    [ValidatePattern('^\d+\.\d+\.\d+$')]
+    [string]$Version = "0.0.0"
 )
 $ErrorActionPreference = "Stop"
 $repo = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
-$name = "Coconut-win-x64"
+$name = if ($Server) { "Coconut-$Version-win-x64-servidor" } else { "Coconut-$Version-win-x64" }
 $stage = Join-Path $repo "artifacts\app\$name"
 $archive = Join-Path $repo "artifacts\app\$name.zip"
 
 if (Test-Path $stage) { Remove-Item $stage -Recurse -Force }
 
 # 1. App autocontido: .NET e Windows App SDK vão junto.
-dotnet publish (Join-Path $repo "src\Coconut.App") -c Release -r win-x64 --self-contained true -p:DebugType=None -o $stage
+dotnet publish (Join-Path $repo "src\Coconut.App") -c Release -r win-x64 --self-contained true -p:DebugType=None -p:Version=$Version -o $stage
 if ($LASTEXITCODE -ne 0) { throw "dotnet publish falhou" }
 
 $native = "datachannel.dll", "juice.dll", "libcrypto-3-x64.dll", "libssl-3-x64.dll", "opus.dll", "srtp2.dll"
@@ -37,7 +39,9 @@ foreach ($dll in "msvcp140.dll", "vcruntime140.dll", "vcruntime140_1.dll") { Cop
 
 # 3. Servidor pré-configurado, LEIA-ME e licenças (GPLv3 exige a licença e o acesso ao código-fonte).
 $utf8 = New-Object System.Text.UTF8Encoding($false)
-[System.IO.File]::WriteAllText((Join-Path $stage "coconut.defaults.json"), (@{ ServerAddress = $Server } | ConvertTo-Json -Compress), $utf8)
+if ($Server) {
+    [System.IO.File]::WriteAllText((Join-Path $stage "coconut.defaults.json"), (@{ ServerAddress = $Server } | ConvertTo-Json -Compress), $utf8)
+}
 Copy-Item (Join-Path $repo "deploy\windows\LEIA-ME.txt") $stage
 Copy-Item (Join-Path $repo "LICENSE") (Join-Path $stage "LICENCA.txt")
 $licenses = Join-Path $stage "licencas-terceiros"

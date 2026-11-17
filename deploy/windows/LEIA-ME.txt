@@ -3,7 +3,13 @@ COCONUT - chamadas de voz ponto a ponto (versão de teste)
 
 O Coconut é um app de chamada de voz para Windows 11. O áudio vai direto de um
 computador para o outro (P2P, criptografado); o servidor só apresenta os
-participantes e nunca recebe o áudio. O servidor já vem configurado neste pacote.
+participantes e nunca recebe o áudio.
+
+SERVIDOR
+Se você recebeu este zip de quem vai te chamar, o servidor já vem configurado.
+Se baixou do GitHub, peça o endereço do servidor (começa com wss://) a quem
+vai te chamar e informe em "Avançado" > "Servidor de sinalização", na tela
+inicial. Todos na mesma sala precisam usar o mesmo servidor.
 
 REQUISITOS
 - Windows 11, 64 bits. Não precisa instalar .NET nem nenhum outro programa.
